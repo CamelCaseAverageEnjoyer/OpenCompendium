@@ -1,1 +1,15 @@
 please_push
+.gitignore
+
+PythonCompendium/.ipynb_checkpoints
+PythonCompendium/FlyInTheBus/avi
+PythonCompendium/FlyInTheBus/res
+PythonCompendium/MyCarEngine/res_avi
+PythonCompendium/MyCarEngine/res
+PythonCompendium/MyCarEngine/img
+PythonCompendium/Study/School/schoolfiles/
+PythonCompendium/Study/Python-2-MIPT/img/
+PythonCompendium/Study/Python-2-MIPT/lessons
+PythonCompendium/storage/banners/img/
+
+
