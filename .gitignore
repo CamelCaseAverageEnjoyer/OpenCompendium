@@ -12,4 +12,20 @@ PythonCompendium/Study/Python-2-MIPT/img/
 PythonCompendium/Study/Python-2-MIPT/lessons
 PythonCompendium/storage/banners/img/
 
+R&D master/venv
+R&D master/__pycache__
+R&D master/img
+R&D master/storage
+R&D master/.idea
+R&D master/icons
+R&D master/hdri
+R&D master/res_hdr_3_3.gif
 
+R&D PhD/venv
+R&D PhD/__pycache__
+R&D PhD/.idea
+R&D PhD/img
+R&D PhD/images/skins/
+R&D PhD/res/
+R&D PhD/srs/kiamformation/data/measures_vector_notes_last.txt
+R&D PhD/srs/kiamformation/data/trajectories/
