@@ -82,36 +82,6 @@ def numerical_and_symbolic_polymorph(trigger_var, trigger_type, trigger_out, not
         return wrapper
     return actual_decorator
 
-'''def sympy_numpy_polymorphism(func):
-    """
-    Используйте в kwargs аргумент и тип: trigger_var = a, trigger_type = list,
-    """
-    def local_func(*args, **kwargs):
-        if isinstance(kwargs['trigger_var'], kwargs['trigger_type']):
-            from numpy import sin, cos, sqrt, tan, arctan as atan
-            from numpy.linalg import norm, inv
-            kwargs['out'] = kwargs['trigger_out']
-        else:
-            from sympy import sin, cos, sqrt, Matrix, atan, tan
-            norm = sympy_norm
-            kwargs['out'] = Matrix
-            inv = lambda x: x.inv()
-        kwargs['sin'] = sin
-        kwargs['cos'] = cos
-        kwargs['tan'] = tan
-        kwargs['sqrt'] = sqrt
-        kwargs['norm'] = norm
-        kwargs['inv'] = inv
-        kwargs['atan'] = atan
-
-        value = func(*args, **kwargs)
-
-        if isinstance(value, tuple):
-            return tuple(kwargs['out'](i) for i in value)
-        return kwargs['out'](value)
-
-    return local_func'''
-
 def get_same_type_conversion(a):
     if isinstance(a, list):
         return list
