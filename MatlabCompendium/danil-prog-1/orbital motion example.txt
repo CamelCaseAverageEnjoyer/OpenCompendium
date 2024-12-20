@@ -1,0 +1,25 @@
+mu_earth = 389600e9;
+inc = 60*pi/180; %inclination
+phi = 0;         %ascending node
+w = 0;           %pericenter argument
+r_p = 10e6;      %pericenter
+r_a = 200e6;     %apocenter
+
+excentr = (r_a - r_p)/(r_a + r_p);
+a = (r_p + r_a)/2;
+p = a*(1 - excentr^2);
+
+orbit_period = 2*pi*sqrt(a^3/mu_earth);
+t_pi = -orbit_period*0.3;
+time_step = 1;
+termination_time = orbit_period*0.3;
+t = 0:time_step:termination_time;
+N = length(t);
+
+r = zeros(3, N);
+v = zeros(3, N);
+approx = 0;
+
+for i = 1:N
+    [r(:, i), v(:, i), approx] = orbitalMotionKeplerian(mu_earth, p, excentr, phi, w, inc, t_pi, t(i), approx);
+end
