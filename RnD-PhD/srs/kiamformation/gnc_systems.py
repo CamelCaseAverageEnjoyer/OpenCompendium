@@ -84,7 +84,7 @@ class KalmanFilter:
                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) * self.v.dT + np.eye(self.j) + \
-                np.bmat([[np.zeros((9, 12))], [np.zeros((3, 9)), Phi_w]])
+                np.bmat([[np.zeros((9, 12))], [np.zeros((3, 9)), Phi_w * self.v.dT]])
 
     @numerical_and_symbolic_polymorph(trigger_var=(1, 'w'), trigger_type=Union[None], trigger_out=lambda x: x)
     def get_Phi(self, w=None, w0=None, **kwargs):

@@ -3,7 +3,7 @@
 """
 import sys  
 
-path = "/home/kodiak/PycharmProjects/NIR_FEMTO/srs"
+path = "/home/kodiak/Desktop/OpenCompendium/RnD-PhD/srs"
 sys.path.insert(0, path)
 
 import kiamformation as kf

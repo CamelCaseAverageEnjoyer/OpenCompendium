@@ -24,7 +24,7 @@ def real_workload_time(n: int, n_total: int, time_begin, time_now) -> str:
 
 def rand_txt() -> str:
     from random import choice
-    with open("data/phrases.txt") as f:
+    with open("/home/kodiak/Desktop/OpenCompendium/RnD-PhD/srs/kiamformation/data/phrases.txt") as f:
         lines = f.readlines()
     return choice(lines).strip()
 

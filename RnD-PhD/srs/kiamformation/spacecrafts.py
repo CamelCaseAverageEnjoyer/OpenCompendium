@@ -6,7 +6,7 @@ from symbolic import numerical_and_symbolic_polymorph
 # >>>>>>>>>>>> Диаграмма направленности антенн связи <<<<<<<<<<<<
 @numerical_and_symbolic_polymorph(trigger_var=(1, 'r'), trigger_type=np.ndarray, trigger_out=lambda x: x,
                                   not_trigger_out=lambda x: x)
-def local_dipole(v: Variables, r, ind: str = 'x', **kwargs):
+def local_dipole(v: Variables, r, ind: str = 'x', model = 'half-wave dipol', **kwargs):
     """Возвращает диаграмму направленности одной полуволновой антенны (бублик). Костыль: возвращается >= 0
     :param v: Объект класса Variables
     :param r: Радиус-вектор направления антенны
@@ -20,10 +20,12 @@ def local_dipole(v: Variables, r, ind: str = 'x', **kwargs):
     # v.DISTORTION = 0.1
     # r_12 += np.array([0.03, 0.05, 0])
     # r_12 = r / norm(r)
-
+    
     sin_theta = norm(my_cross(r_antenna_brf, r_12))
     cos_theta = dot(r_antenna_brf, r_12)
-    return cos(pi / 2 * cos_theta) / sin_theta  # v.DISTORTION не используется !!!!!
+    if model == 'half-wave dipol':
+        return cos(pi / 2 * cos_theta) / sin_theta  # v.DISTORTION не используется !!!!!
+    return sin_theta
 
 def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False, multake=None, mulsend=None, gm=None):
     """Внимание! Всё переделано - теперь возвращается только список для повышения градуса полиморфизма,
