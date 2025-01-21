@@ -1,8 +1,10 @@
-function show_marker(r, r1, q, d)
+function show_aruco(dims, A, r_irf, r_brf)  % (r, r1, q, d)
+    % Marker define
     marker = [1 1 1 0;
               1 0 1 1;
               1 1 0 1;
               1 1 1 1];
+
     marker_clr = [0; 1];
     n = size(marker);
     n = n(1);
@@ -22,7 +24,7 @@ function show_marker(r, r1, q, d)
         end
     end
     
-    % ??????????????k?? b????????k????
+    % Aruco borders
     x(:, n*i+j+1:n*i+j+4) = [0 0 (1-h) 0; h 0 1 0; h 1 1 1; 0 1 (1-h) 1];
     y(:, n*i+j+1:n*i+j+4) = [0 0 0 (1-h); 0 h 0 1; 1 h 1 1; 1 0 1 (1-h)];
     z(:, n*i+j+1:n*i+j+4) = [0 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 0];
@@ -30,21 +32,25 @@ function show_marker(r, r1, q, d)
     x = x - 0.5;
     y = y - 0.5;
 
-    % Y????l????????????
-    x = x * d;
-    y = y * d;
-
-    % ????????ll??l??????j ??????????????
-    x = x + r1(1);
-    y = y + r1(2);
-    z = z + r1(3);
-
-    % ????????????????
-
-    % ????????ll??l??????j ??????????????
-    x = x + r(1);
-    y = y + r(2);
-    z = z + r(3);
+    % BRF -> IRF
+    x = reshape(x, 1, []);
+    y = reshape(y, 1, []);
+    z = reshape(z, 1, []);
+    for i = 1:length(x)
+        r = [x(i);y(i);z(i)];
+        r = r .* dims;  % stretching
+        r = r + r_brf;  % translation
+        r = A * r;  % rotation
+        r = r + r_irf;  % translation
+        x(i) = r(1);
+        y(i) = r(2);
+        z(i) = r(3);
+    end
+    x = reshape(x, 4, []);
+    y = reshape(y, 4, []);
+    z = reshape(z, 4, []);
 
     patch(x,y,z,c);
 end
+
+

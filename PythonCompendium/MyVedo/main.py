@@ -1,4 +1,112 @@
-clear;
+import numpy as np
+from stl import mesh
+import vedo
+from vedo import dataurl, Mesh, Plotter
+from vedo import IcoSphere, Earth, show
+from vedo import dataurl, show, Cube
+
+from get_cube import *
+from dynamics import *
+
+earth_rate = 1e5
+
+def iteration_timer(eventId=None):
+    global fig_view, camera
+
+    d.time_step(spacecrafts)
+
+    # Deploying
+    for j in range(n_deputy):
+        if (not if_deployed_deputy[j]) and d.t >= t_deploy_deputy[j]:
+            if_deployed_deputy[j] = True
+            spacecrafts.append(Spacecraft(d, r_orf_deputy[j], v_orf_deputy[j],
+                                             q_irf_deputy[j], w_orf_deputy[j]))
+
+    mesh = IcoSphere(pos=(d.r_orb, 0, 0), r=d.r_earth, subdivisions=5, alpha=1.0).texture('img/earth2.jpg') 
+    mesh += c.show_chief(d)
+    for j in range(2, len(spacecrafts)):
+        mesh += spacecrafts[j].show_deputy(d)
+    sun_point = vedo.Point(d.i2o_r([0,-1e5,0]), c='y')
+    sun_light = vedo.Light(sun_point, c='white', intensity=3)
+    mesh += sun_point
+    mesh += sun_light
+    fig_view.pop().add(mesh).render()
+
+    camera.SetPosition(c.get_campos_orf(d))
+    camera.SetEyePosition(c.get_camdir_orf(d))
+
+def button_func(obj, ename):
+    global timerId
+    fig_view.timer_callback("destroy", timerId)
+    if "Play" in button.status():
+        timerId = fig_view.timer_callback("create", dt=100)
+    button.switch()
+
+    # timerId = fig_view.timer_callback("create", dt=100)
+
+global timerId, fig_view, button, evnetId, camera
+
+timerId = 1
+fig_view = Plotter(bg='k', size=(900, 600))
+# button = fig_view.add_button(button_func, states=["Play ", "Pause"], size=10, bold=True, pos=[0.98, 1])
+fig_view.timer_callback("destroy", timerId)
+timerId = fig_view.timer_callback("create", dt=100)
+evnetId = fig_view.add_callback("timer", iteration_timer)
+
+""" Типа документация
+styles_of_light = ['default', 'metallic', 'plastic', 'shiny', 'glossy', 'ambient', 'off']
+"""
+
+""" Динамика системы """
+h_orb = 400e3
+dt = 1.
+t_modeling = 100.
+d = Dynamics(h_orb=h_orb, dt=dt)
+
+""" Материнский аппарат """
+r_orf_chief = np.array([0, 0, 0])
+v_orf_chief = np.array([0, 0, 0])
+q_irf_chief = np.array([1, 0, 0, 0])
+w_orf_chief = np.array([0, 0.01, 0])
+c = Spacecraft(d,r_orf_chief,v_orf_chief,q_irf_chief,w_orf_chief)
+c.cam_pos = np.array([0, 0, 0])
+c.cam_dir = np.array([0, 4, -0.1])
+c.cam_up =  np.array([0, 0, 1])
+spacecrafts = [c]
+chief_mesh = c.show_chief(d)  # .lighting('ambient')  # .color("silver")
+
+""" Дочерние аппараты """
+n_deputy = 3
+t_deploy_deputy = [10, 20, 30]
+if_deployed_deputy = [False, False, False]
+r_orf_deputy = [np.array([0,0.1,0]) for i in range(3)]  # in m
+v_orf_deputy = [np.array([0,0.01,0]) for i in range(3)]  # in m/s
+i = 1/np.sqrt(2)
+q_irf_deputy = [np.array([-i, i, 0, 0]) for i in range(3)]
+w_orf_deputy = [np.zeros(3) for i in range(3)]
+
+
+""" Земля """
+d.r_orb /= earth_rate
+d.r_earth /= earth_rate
+earth_mesh = IcoSphere(pos=(d.r_orb, 0, 0), r=d.r_earth, subdivisions=4, alpha=1.0).texture('img/earth2.jpg')  # .color("silver") 
+# earth = vedo.Earth(r=2, style=3)
+
+
+""" Освещение """
+sun_point = vedo.Point(d.i2o_r([0,-1e5,0]), c='y')
+sun_light = vedo.Light(sun_point, c='white', intensity=3)
+
+camera = vedo.oriented_camera(center=c.get_campos_orf(d),
+                              up_vector=c.get_camup_orf(d),
+                              backoff_vector=c.get_camdir_orf(d))
+
+print(f"Camera: r={c.get_campos_orf(d)}, dir={c.get_camdir_orf(d)}, \nSpacecraft r={c.r_orf}")
+
+fig_view.show(__doc__, earth_mesh + chief_mesh + sun_light + sun_point, camera=camera, resetcam=False, zoom=1, bg='k')  # , bg="hdri/2.hdr")
+
+
+"""clear;
 
 %% Params of display
 window_size = [900 600];
@@ -142,5 +250,5 @@ end
 % plot(modeling_report.CameraPosORF(:,2) - modeling_report.ChiefPosORF(:,2))
 % plot(modeling_report.CameraPosORF(:,3) - modeling_report.ChiefPosORF(:,3))
 % hold off;
-% legend(["x", "y", "z"]);
+% legend(["x", "y", "z"]);"""
 
