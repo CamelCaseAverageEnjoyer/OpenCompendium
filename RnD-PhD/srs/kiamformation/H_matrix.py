@@ -2,10 +2,9 @@
 Файл сгененрирован программой PycharmProjects/PythonCompendium/DissertationPhd/advanced dynamic.ipynb (Раздел: Генерация файла H)
 Копия файла из каталога PycharmProjects/PythonCompendium/DissertationPhd/storage/observability_mapping_partial_derivatives.py
 '''
-from symbolic import numerical_and_symbolic_polymorph
 import numpy as np
+from symbolic import *
 
-@numerical_and_symbolic_polymorph(trigger_var=(11, 'r1'), trigger_type=np.ndarray, trigger_out=lambda x: x)
 def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None, **kwargs):
     '''Возвращает элемент матрицы Н в L_z^(c/d) строк и 6/13 столбцов.
     Столбец элемента матрицы H определяет только i_x. Остальные параметры определяют строку.
@@ -31,7 +30,6 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
     :param q1: Кватернион 1-го КА (опционально)
     :param q2: Кватернион 2-го КА (опционально)
     '''
-    sqrt, sin, cos, pi, vec_type = kwargs['sqrt'], kwargs['sin'], kwargs['cos'], kwargs['pi'], kwargs['vec_type']
 
     ff_sequence = []  # Последовательность номеров непустых столбцов, длина ff_sequence - кол-во строк нижней подматицы
     for i_f1 in range(fn):
@@ -522,8 +520,7 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
                        ])
 
 
-@numerical_and_symbolic_polymorph(trigger_var=(0, 't'), trigger_type=(int, float), trigger_out=lambda x: x)
-def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False, **kwargs):
+def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False):
     '''Возвращает матрицу частных производных Н.
     :param c_ant: Количество антенн у кубсата
     :param f_ant: Количество антенн у чипсата
@@ -541,7 +538,6 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
     :return: Матрица частных производных H. Отображение состояния в измерения
     ''' 
     from sympy import var
-    sqrt, sin, cos, pi, vec_type, vstack, bmat = kwargs['sqrt'], kwargs['sin'], kwargs['cos'], kwargs['pi'], kwargs['vec_type'], kwargs['vstack'], kwargs['bmat']
 
     fn = f.n
     cn = c.n
@@ -560,8 +556,8 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
             if i_f1 != i_f2:
                 ff_sequence += [[i_f1, i_f2]]
     
-    cf_matrix = vec_type([])
-    ff_matrix = vec_type([])
+    cf_matrix = None
+    ff_matrix = None
     for relation in ['cf', 'ff']:
         tmp_rows = None
         # 2*c_ant*f_ant*fn*cn if relation=='cf' else f_ant**2*fn*(fn-1)  # Что тут не так?  

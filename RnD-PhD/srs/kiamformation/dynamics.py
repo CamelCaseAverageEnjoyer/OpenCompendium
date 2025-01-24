@@ -5,12 +5,11 @@ from datetime import datetime
 from primary_info import *
 from gnc_systems import *
 from my_plot import *
-from symbolic import get_same_type_conversion, numerical_and_symbolic_polymorph
+from symbolic import *
 import quaternion
 
 # >>>>>>>>>>>> Задание движения Хилла-Клохесси-Уилтшира <<<<<<<<<<<<
-@numerical_and_symbolic_polymorph(trigger_var=(0, 'r'), trigger_type=np.ndarray, trigger_out=list)
-def get_c_hkw(r, v, w, **kwargs):
+def get_c_hkw(r, v, w):
     """Возвращает константы C[0]..C[5] движения Хилла-Клохесси-Уилтштира"""
     return [2*r[2] + v[0]/w,
             v[2]/w,
@@ -19,27 +18,22 @@ def get_c_hkw(r, v, w, **kwargs):
             v[1]/w,
             r[1]]
 
-@numerical_and_symbolic_polymorph(trigger_var=(0, 'C'), trigger_type=list, trigger_out=np.array)
-def r_hkw(C, w, t, **kwargs):
+def r_hkw(C, w, t):
     """Возвращает радиус-вектор в ОСК в момент времени t"""
-    cos, sin = kwargs['cos'], kwargs['sin']
-    return [-3 * C[0] * w * t + 2 * C[1] * cos(w * t) - 2 * C[2] * sin(w * t) + C[3],
-            C[5] * cos(w * t) + C[4] * sin(w * t),
-            2 * C[0] + C[2] * cos(w * t) + C[1] * sin(w * t)]
+    return vec_type([-3 * C[0] * w * t + 2 * C[1] * cos(w * t) - 2 * C[2] * sin(w * t) + C[3],
+                     C[5] * cos(w * t) + C[4] * sin(w * t),
+                     2 * C[0] + C[2] * cos(w * t) + C[1] * sin(w * t)])
 
-@numerical_and_symbolic_polymorph(trigger_var=(0, 'C'), trigger_type=list, trigger_out=np.array)
-def v_hkw(C, w, t, **kwargs):
+def v_hkw(C, w, t):
     """Возвращает вектор скоростей в ОСК в момент времени t"""
-    cos, sin = kwargs['cos'], kwargs['sin']
-    return [-3 * C[0] * w - 2 * w * C[1] * sin(w * t) - 2 * w * C[2] * cos(w * t),
-            w * C[4] * cos(w * t) - w * C[5] * sin(w * t),
-            w * C[2] * sin(w * t) + w * C[1] * cos(w * t)]
+    return vec_type([-3 * C[0] * w - 2 * w * C[1] * sin(w * t) - 2 * w * C[2] * cos(w * t),
+                     w * C[4] * cos(w * t) - w * C[5] * sin(w * t),
+                     w * C[2] * sin(w * t) + w * C[1] * cos(w * t)])
 
 def get_rand_c(v: Variables) -> list:
     """(quaternion or quaternion_but_i_dont_give_a_fuck)"""  # Чего? Что это значит?
-    r_spread, v_spread, _ = v.RVW_ChipSat_SPREAD
-    return get_c_hkw(r=np.random.uniform(-r_spread, r_spread, 3),
-                     v=np.random.uniform(-v_spread, v_spread, 3), w=v.W_ORB)
+    return get_c_hkw(r=v.spread(param='r', name='FemtoSat'),
+                     v=v.spread(param='v', name='FemtoSat'), w=v.W_ORB)
 
 # >>>>>>>>>>>> Поступательное движение, интегрирование <<<<<<<<<<<<
 def get_atm_params(v: Variables, h: float, atm_model: str = None) -> tuple:
@@ -88,28 +82,23 @@ def get_atm_params(v: Variables, h: float, atm_model: str = None) -> tuple:
         rho = rho.value
     return rho, T, p
 
-@numerical_and_symbolic_polymorph(trigger_var=(1, 'r'), trigger_type=np.ndarray, trigger_out=np.array)
-def get_geopotential_acceleration(vrs: Variables, r, v, w, mu, **kwargs):
+def get_geopotential_acceleration(vrs: Variables, r, v, w, mu):
     """Возвращает ускорение КА от притяжения Земли. Внимание! При ('hkw' in _vrs.SOLVER) ускорение в ОСК, иначе ИСК!"""
-    norm = kwargs['norm']
     if 'hkw' in vrs.SOLVER:
-        return [-2 * w * v[2],
-                -w**2 * r[1],
-                2 * w * v[0] + 3 * w**2 * r[2]]
+        return vec_type([-2 * w * v[2],
+                         -w**2 * r[1],
+                         2 * w * v[0] + 3 * w**2 * r[2]])
     return mu * r / norm(r) ** 3
 
-@numerical_and_symbolic_polymorph(trigger_var=(3, 'r'), trigger_type=np.ndarray, trigger_out=np.array)
-def get_aero_drag_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, rho=None, **kwargs):
+def get_aero_drag_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, rho=None):
     """Возвращает ускорение КА от сопротивления атмосферы.
     Внимание! При параметре vrs.SOLVER='hkw' возвращает ускорение в ОСК, иначе в ИСК!"""
-    norm = kwargs['norm']
-
     S = quart2dcm(obj.q[i])
     cos_alpha = matrix2angle(S) if obj.name == "FemtoSat" else 1
     # rho = get_atm_params(v=vrs, h=obj.r_orf[i][2] + vrs.HEIGHT)[0]
 
     if 'hkw' in vrs.SOLVER:
-        v_real = v + kwargs['vec_type']([vrs.V_ORB, 0, 0])
+        v_real = v + vec_type([vrs.V_ORB, 0, 0])
         rho = get_atm_params(v=vrs, h=r[2] + vrs.HEIGHT)[0] if rho is None else rho
         return - v_real * norm(v_real) * obj.get_blown_surface(cos_alpha) * rho / 2 / obj.mass
 
@@ -123,10 +112,8 @@ def get_full_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, w=None, 
             force += get_aero_drag_acceleration(vrs=vrs, r=r, v=v, obj=obj, i=i, rho=rho)
         return force
 
-@numerical_and_symbolic_polymorph(trigger_var=(3, 'rv'), trigger_type=np.ndarray, trigger_out=lambda x: x)
 def translate_rhs(vrs: Variables, obj: Apparatus, i: int, rv, w=None, mu=None, rho=None, **kwargs):
     """При численном моделировании rv передаётся 1 numpy.ndarray, иначе rv типа tuple"""
-    append = kwargs['append']
     r, v = rv if isinstance(rv, tuple) else (rv[[0, 1, 2]], rv[[3, 4, 5]])
     dr = v
     dv = get_full_acceleration(vrs=vrs, obj=obj, i=i, r=r, v=v, w=w, mu=mu, rho=rho)
@@ -148,17 +135,13 @@ def rk4_translate(v_: Variables, obj: Union[CubeSat, FemtoSat], i: int, dt: floa
 
 
 # >>>>>>>>>>>> Вращательное движение, интегрирование <<<<<<<<<<<<
-@numerical_and_symbolic_polymorph(trigger_var=(3, 'w'), trigger_type=np.ndarray, trigger_out=lambda x: x)
-def get_torque(v: Variables, obj: Apparatus, q, w,  **kwargs):
+def get_torque(v: Variables, obj: Apparatus, q, w):
     """Вектор внешнего углового ускорения"""
     return np.zeros(3)
 
-@numerical_and_symbolic_polymorph(trigger_var=(4, 'qw'), trigger_type=np.ndarray, trigger_out=lambda x: x)
-def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw, **kwargs):
+def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):
     """При численном моделировании qw передаётся 1 numpy.ndarray;
     При символьном вычислении qw должен быть типа tuple"""
-    inv, append, quat = kwargs['inv'], kwargs['append'], kwargs['quat']
-
     q, w = qw if isinstance(qw, tuple) else (np.quaternion(*qw[[0, 1, 2, 3]]), qw[[4, 5, 6]])
 
     # U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
@@ -197,39 +180,36 @@ def rk4_attitude(v_: Variables, obj: Union[CubeSat, FemtoSat], t: float, i: int,
 
 
 # >>>>>>>>>>>> Перевод между системами координат <<<<<<<<<<<<
-@numerical_and_symbolic_polymorph(trigger_var=(1, 't'), trigger_type=(float, int), trigger_out=lambda x: x)
-def get_matrices(v: Variables, t, obj: Apparatus = None, n: int = None, first_init: bool = False, q=None, **kwargs):
+def get_matrices(v: Variables, t, obj: Apparatus = None, n: int = None, first_init: bool = False, q=None):
     """Функция возвращает матрицы поворота.
     Инициализируется в dymancis.py, используется в spacecrafts, dynamics"""
     q = obj.q[n] if q is None else q
-    atan, tan, sin, cos, norm, sqrt = \
-        kwargs['atan'], kwargs['tan'], kwargs['sin'], kwargs['cos'], kwargs['norm'], kwargs['sqrt']
     E = t * v.W_ORB  # Эксцентрическая аномалия
     if v.ECCENTRICITY == 0:
         f = E
     else:
-        f = 2 * atan(sqrt((1 + v.ECCENTRICITY) / (1 - v.ECCENTRICITY)) * tan(E / 2))  # Истинная аномалия
+        f = 2 * arctan(sqrt((1 + v.ECCENTRICITY) / (1 - v.ECCENTRICITY)) * tan(E / 2))  # Истинная аномалия
     A = quart2dcm(q)
     if 'hkw' in v.SOLVER or first_init:
-        U = kwargs['vec_type']([[0, 1, 0],  # Поворот к экваториальной плоскости
-                                [0, 0, 1],
-                                [1, 0, 0]]) @ \
-            kwargs['vec_type']([[cos(f), sin(f), 0],  # Разница между истинной аномалией и местной
-                               [-sin(f), cos(f), 0],
-                               [0, 0, 1]]) @ \
-            kwargs['vec_type']([[1, 0, 0],  # Поворот к плоскости орбиты
-                                [0, cos(v.INCLINATION), sin(v.INCLINATION)],
-                                [0, -sin(v.INCLINATION), cos(v.INCLINATION)]])
+        U = vec_type([[0, 1, 0],  # Поворот к экваториальной плоскости
+                      [0, 0, 1],
+                      [1, 0, 0]]) @ \
+            vec_type([[cos(f), sin(f), 0],  # Разница между истинной аномалией и местной
+                      [-sin(f), cos(f), 0],
+                      [0, 0, 1]]) @ \
+            vec_type([[1, 0, 0],  # Поворот к плоскости орбиты
+                      [0, cos(v.INCLINATION), sin(v.INCLINATION)],
+                      [0, -sin(v.INCLINATION), cos(v.INCLINATION)]])
         translation = v.P / (1 + v.ECCENTRICITY * cos(f))
     else:
         e_z = vec2unit(v.ANCHOR.r_irf[0])
         e_x = vec2unit(v.ANCHOR.v_irf[0])
         e_y = vec2unit(my_cross(e_z, e_x))
         e_x = vec2unit(my_cross(e_y, e_z))
-        U = kwargs['vec_type']([e_x, e_y, e_z])
+        U = vec_type([e_x, e_y, e_z])
         translation = norm(v.ANCHOR.r_irf[0])
     S = A @ U.T
-    R_orb = U.T @ kwargs['vec_type']([0, 0, translation])
+    R_orb = U.T @ vec_type([0, 0, translation])
     return U, S, A, R_orb
 
 def i_o(a, v: Variables, U, vec_type: str):

@@ -1,4 +1,5 @@
 import numpy as np
+import sympy
 
 def get_vars(name: str, n: int, numb: bool = True):
     """Генерит символьные переменные"""
@@ -33,7 +34,61 @@ def sympy_append(*args):
 def sympy_mean(a):
     return sum(list(a)) / len(a)
 
-def numerical_and_symbolic_polymorph(trigger_var, trigger_type, trigger_out, not_trigger_out=None):
+def cross(a, b):
+    return np.cross(a, b) if isinstance(a, np.ndarray | list) else a.cross(b)
+
+def sin(a):
+    return np.sin(a) if isinstance(a, int | float | np.ndarray) else sympy.sin(a)
+
+def cos(a):
+    return np.cos(a) if isinstance(a, int | float | np.ndarray) else sympy.cos(a)
+
+def sqrt(a):
+    return np.sqrt(a) if isinstance(a, int | float | np.ndarray) else sympy.sqrt(a)
+
+def tan(a):
+    return np.tan(a) if isinstance(a, int | float | np.ndarray) else sympy.tan(a)
+
+def arctan(a):
+    return np.arctan(a) if isinstance(a, int | float | np.ndarray) else sympy.atan(a)
+
+def append(*args):
+    return np.append(*args) if isinstance(args[0][0], int | float | np.ndarray) else sympy_append(*args)
+
+def pi(a):
+    """Возвращает число π в зависимости от типа переменной 'a'
+    :param a: при (int | float | np.ndarray) требует численное значение π, иначе символьное"""
+    return np.pi if isinstance(a, int | float | np.ndarray) else sympy.pi
+
+def mean(a):
+    return np.mean(a) if isinstance(a[0], int | float | np.ndarray) else sympy_mean(a)
+
+def vstack(*args):
+    return np.vstack(*args) if isinstance(args[0][0], int | float | np.ndarray) else sympy.Matrix.vstack(*args)
+
+def bmat(*args):
+    return np.bmat(*args) if isinstance(args[0][0][0], int | float | np.ndarray) else \
+        sympy.Matrix(sympy.BlockMatrix(*args))
+
+def norm(a):
+    return np.linalg.norm(a) if isinstance(a, int | float | np.ndarray | list) else sympy_norm(a)
+
+def inv(a):
+    return np.linalg.inv(a) if isinstance(a, int | float | np.ndarray) else a.inv()
+
+def vec_type(a):
+    try:
+        return np.array(a) if (isinstance(a[0][0], int | float | np.ndarray)) else sympy.Matrix(a)
+    except:
+        return np.array(a) if (isinstance(a[0], int | float | np.ndarray)) else sympy.Matrix(a)
+
+def quat(a):
+    return np.quaternion(*a) if isinstance(a[0], int | float | np.ndarray) else sympy.Matrix([0, a[0], a[1], a[2]])
+
+def dot(a, b):
+    return a @ b if isinstance(a[0], int | float | np.ndarray) else (a.T @ b)[0]
+
+"""def numerical_and_symbolic_polymorph(trigger_var, trigger_type, trigger_out, not_trigger_out=None):
     def actual_decorator(func):
         def wrapper(*args, **kwargs):
             # print(f"args: {args} | kwargs: {kwargs}")
@@ -80,7 +135,7 @@ def numerical_and_symbolic_polymorph(trigger_var, trigger_type, trigger_out, not
                 return tuple(out_type(i) for i in value)
             return out_type(value)
         return wrapper
-    return actual_decorator
+    return actual_decorator"""
 
 def get_same_type_conversion(a):
     if isinstance(a, list):

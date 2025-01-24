@@ -2,14 +2,13 @@
 from typing import Union
 import numpy as np
 import quaternion
-from symbolic import numerical_and_symbolic_polymorph
+from symbolic import *
 
 
-@numerical_and_symbolic_polymorph(trigger_var=(0, 'a'), trigger_type=np.ndarray, trigger_out=np.array)
-def get_antisymmetric_matrix(a, **kwargs):
-    return [[0, -a[2], a[1]],
-            [a[2], 0, -a[0]],
-            [-a[1], a[0], 0]]
+def get_antisymmetric_matrix(a):
+    return vec_type([[0, -a[2], a[1]],
+                    [a[2], 0, -a[0]],
+                    [-a[1], a[0], 0]])
 
 def deg2rad(a: float) -> float:
     return a / 180 * np.pi
@@ -25,13 +24,11 @@ def vec2unit(a):
     if isinstance(a, Matrix):
         return sympy_norm(a)
 
-@numerical_and_symbolic_polymorph(trigger_var=(0, 'a'), trigger_type=np.ndarray, trigger_out=np.array)
-def my_cross(a, b, **kwargs):
+def my_cross(a, b):
     """Функция векторного произведения"""
-    _ = kwargs
-    return [a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0]]
+    return vec_type([a[1] * b[2] - a[2] * b[1],
+                     a[2] * b[0] - a[0] * b[2],
+                     a[0] * b[1] - a[1] * b[0]])
 
 def matrix2angle(M):
     if isinstance(M, np.ndarray):

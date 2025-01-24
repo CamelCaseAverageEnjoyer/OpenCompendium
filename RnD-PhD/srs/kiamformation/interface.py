@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QWidget, QGridLayout, QPushButton, QLabel, QApplicat
 from simulation import save_simulation_trajectories, load_simulation_trajectories
 from my_plot import *
 
-ICON_SIZE = 70
+ICON_SIZE = 50
 
 class Window(QWidget):
 

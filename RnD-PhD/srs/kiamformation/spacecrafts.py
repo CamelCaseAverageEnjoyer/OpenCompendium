@@ -1,20 +1,18 @@
 """Функции, связанные с архитектурой КА"""
 from my_math import *
 from config import Variables
-from symbolic import numerical_and_symbolic_polymorph
+from symbolic import *
 
 # >>>>>>>>>>>> Диаграмма направленности антенн связи <<<<<<<<<<<<
-@numerical_and_symbolic_polymorph(trigger_var=(1, 'r'), trigger_type=np.ndarray, trigger_out=lambda x: x,
-                                  not_trigger_out=lambda x: x)
-def local_dipole(v: Variables, r, ind: str = 'x', model = 'half-wave dipol', **kwargs):
+def local_dipole(v: Variables, r, ind: str = 'x', model = 'half-wave dipol'):
     """Возвращает диаграмму направленности одной полуволновой антенны (бублик). Костыль: возвращается >= 0
     :param v: Объект класса Variables
     :param r: Радиус-вектор направления антенны
-    :param ind: Координата направления антенны"""
-    norm, cos, pi, dot = kwargs['norm'], kwargs['cos'], kwargs['pi'], kwargs['dot']
+    :param ind: Координата направления антенны
+    :param model: """
     if ind not in ['x', 'y', 'z']:
         raise ValueError(f"Координата «{ind}» должна быть среди: [x, y, z]")
-    r_antenna_brf = kwargs['vec_type']([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')]) * 1.
+    r_antenna_brf = vec_type([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')]) * 1.
     r_12 = r / norm(r)
 
     # v.DISTORTION = 0.1
@@ -24,7 +22,7 @@ def local_dipole(v: Variables, r, ind: str = 'x', model = 'half-wave dipol', **k
     sin_theta = norm(my_cross(r_antenna_brf, r_12))
     cos_theta = dot(r_antenna_brf, r_12)
     if model == 'half-wave dipol':
-        return cos(pi / 2 * cos_theta) / sin_theta  # v.DISTORTION не используется !!!!!
+        return cos(pi(r) / 2 * cos_theta) / sin_theta  # v.DISTORTION не используется !!!!!
     return sin_theta
 
 def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False, multake=None, mulsend=None, gm=None):

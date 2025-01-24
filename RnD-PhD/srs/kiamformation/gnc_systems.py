@@ -2,7 +2,7 @@ import numpy as np
 
 from spacecrafts import *
 from H_matrix import *
-from symbolic import numerical_and_symbolic_polymorph
+from symbolic import *
 from cosmetic import *
 
 # >>>>>>>>>>>> Guidance <<<<<<<<<<<<
@@ -57,9 +57,7 @@ class KalmanFilter:
         if self.v.IF_TEST_PRINT:
             my_print(f"Матрицы Ф:{self.Phi.shape}, Q:{self.Q.shape}, P:{self.P.shape}, D:{self.D.shape}", color='g')
 
-    @numerical_and_symbolic_polymorph(trigger_var=(2, 'w0'), trigger_type=Union[float, None], trigger_out=lambda x: x)
-    def get_Phi_1(self, w=None, w0=None, **kwargs):
-        inv = kwargs['inv']
+    def get_Phi_1(self, w=None, w0=None):
         w0 = self.v.W_ORB if w0 is None else w0
         if not self.v.NAVIGATION_ANGLES:  # Оценка орбитального движения
             return np.array([[0, 0, 0, 1, 0, 0],
@@ -69,7 +67,6 @@ class KalmanFilter:
                              [0, - w0 ** 2, 0, 0, 0, 0],
                              [0, 0, 3 * w0 ** 2, 2 * w0, 0, 0]]) * self.v.dT + np.eye(self.j)
         else:  # Оценка орбитального и углового движения
-            # print(f"J: {type(self.f.J)} (w = {w} [type-{type(w)}]) ({kwargs['vec_type']})\n{self.f.J}\n")
             Phi_w = inv(self.f.J) @ (- get_antisymmetric_matrix(w) @ self.f.J +
                                      get_antisymmetric_matrix(self.f.J @ w))
             return np.array([[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -84,15 +81,14 @@ class KalmanFilter:
                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) * self.v.dT + np.eye(self.j) + \
-                np.bmat([[np.zeros((9, 12))], [np.zeros((3, 9)), Phi_w * self.v.dT]])
+                bmat([[np.zeros((9, 12))], [np.zeros((3, 9)), Phi_w * self.v.dT]])
 
-    @numerical_and_symbolic_polymorph(trigger_var=(1, 'w'), trigger_type=Union[None], trigger_out=lambda x: x)
-    def get_Phi(self, w=None, w0=None, **kwargs):
+    def get_Phi(self, w=None, w0=None):
         w0 = self.v.W_ORB if w0 is None else w0
         w = [self.f.apriori_params['w irf'][i] for i in range(self.f.n)] if w is None else w
         # print(f"w: {w}, w0: {w0}")
-        return np.bmat([[np.zeros([self.j, self.j])] * i + [self.get_Phi_1(w=w[i], w0=w0)] +
-                        [np.zeros([self.j, self.j])] * (self.f.n - i - 1) for i in range(self.f.n)])
+        return bmat([[np.zeros([self.j, self.j])] * i + [self.get_Phi_1(w=w[i], w0=w0)] +
+                     [np.zeros([self.j, self.j])] * (self.f.n - i - 1) for i in range(self.f.n)])
 
     def params_vec2dict(self, params: list = None, j: int = None, separate_spacecraft: bool = True):
         p = self.estimation_params if params is None else params

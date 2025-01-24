@@ -1,13 +1,10 @@
 """Комплекс первичной информации"""
 from spacecrafts import *
-from symbolic import numerical_and_symbolic_polymorph
+from symbolic import *
 
 
-@numerical_and_symbolic_polymorph(trigger_var=(6, 'estimated_params'), trigger_type=(np.ndarray, list),
-                                  trigger_out=lambda x: x, not_trigger_out=lambda x: x)
 def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float = None, produce: bool = False,
-                           j: int = None, estimated_params=np.array([]), p: any = None, t=None,
-                           **kwargs) -> Union[None, tuple]:
+                           j: int = None, estimated_params=np.array([]), p: any = None, t=None) -> Union[None, tuple]:
     """Функция обновляет для объектов CubeSat и FemtoSat параметры calc_dist при produce==True. Иначе:
     :param c: Класс кубсатов
     :param f: Класс чипсатов
@@ -19,7 +16,7 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
     :param p: Класс PhysicModel (для флага produce)
     :param t: Время (для символьного вычисления)
     :return: None если produce==True (проведение численного моделирования), иначе список измерений + пометки"""
-    norm, sqrt, mean, vec_type = kwargs['norm'], kwargs['sqrt'], kwargs['mean'], kwargs['vec_type']
+    # norm, sqrt, mean, vec_type = kwargs['norm'], kwargs['sqrt'], kwargs['mean'], kwargs['vec_type']
     randy = np.random.uniform(-1, 1, 3)
     anw, notes = [], []
     S_1, S_2, dr, distance = None, None, None, None
@@ -86,10 +83,10 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
                                       f" {send_len} {take_len}" for i in range(take_len) for j in range(send_len)])
 
     if produce:
-        v.MEASURES_VECTOR = kwargs['vec_type'](anw)
+        v.MEASURES_VECTOR = vec_type(anw)
         v.MEASURES_VECTOR_NOTES = notes
     else:
-        return kwargs['vec_type'](anw), notes
+        return vec_type(anw), notes
 
 def measure_magnetic_field(c: CubeSat, f: FemtoSat, v: Variables, noise: float = 0.) -> None:
     """Функция обновляет для объектов CubeSat и FemtoSat параметры b_env"""
