@@ -1,14 +1,11 @@
 '''
-Файл сгененрирован программой PycharmProjects/PythonCompendium/DissertationPhd/advanced dynamic.ipynb (Раздел: Генерация файла H)
-Копия файла из каталога PycharmProjects/PythonCompendium/DissertationPhd/storage/observability_mapping_partial_derivatives.py
+Файл сгененрирован программой OpenCompendium/RnD-PhD/notebooks/dynamic.ipynb (Раздел: Генерация файла H.matrix.py)
+Копия файла из каталога OpenCompendium/RnD-PhD/notebooks/dynamic.ipynb     ycharmProjects/PythonCompendium/DissertationPhd/storage/observability_mapping_partial_derivatives.py
 '''
-# from symbolic import numerical_and_symbolic_polymorph
-from common_func import *
-numerical_and_symbolic_polymorph = kf.numerical_and_symbolic_polymorph
 import numpy as np
+from symbolic import *
 
-@numerical_and_symbolic_polymorph(trigger_var=(11, 'r1'), trigger_type=np.ndarray, trigger_out=lambda x: x)
-def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None, **kwargs):
+def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
     '''Возвращает элемент матрицы Н в L_z^(c/d) строк и 6/13 столбцов.
     Столбец элемента матрицы H определяет только i_x. Остальные параметры определяют строку.
     :param i_x: Номер чипсата, у которого оценивается вектор-состояние (N вширь всей матрицы H)
@@ -33,7 +30,6 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
     :param q1: Кватернион 1-го КА (опционально)
     :param q2: Кватернион 2-го КА (опционально)
     '''
-    sqrt, sin, cos, pi, vec_type = kwargs['sqrt'], kwargs['sin'], kwargs['cos'], kwargs['pi'], kwargs['vec_type']
 
     ff_sequence = []  # Последовательность номеров непустых столбцов, длина ff_sequence - кол-во строк нижней подматицы
     for i_f1 in range(fn):
@@ -55,7 +51,7 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
         q2_0 = 1 - sqrt(q2_x**2 + q2_y**2 + q2_z**2)
     ω_0 = w_0
 
-    <to_replace>
+    to_replace
     
     if angles_navigation:
         swt = sin(t*w_0)

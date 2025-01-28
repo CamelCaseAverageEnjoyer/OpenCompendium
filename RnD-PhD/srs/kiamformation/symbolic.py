@@ -88,6 +88,12 @@ def quat(a):
 def dot(a, b):
     return a @ b if isinstance(a[0], int | float | np.ndarray) else (a.T @ b)[0]
 
+def block_diag(*args):
+    import scipy
+    return scipy.linalg.block_diag(*args) if isinstance(args[0], np.ndarray) else \
+        sympy.Matrix(sympy.BlockDiagMatrix(*args))
+
+
 """def numerical_and_symbolic_polymorph(trigger_var, trigger_type, trigger_out, not_trigger_out=None):
     def actual_decorator(func):
         def wrapper(*args, **kwargs):

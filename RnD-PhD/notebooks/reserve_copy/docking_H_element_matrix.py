@@ -1,12 +1,12 @@
-'''
+"""
 Файл сгененрирован программой OpenCompendium/RnD-PhD/notebooks/dynamic.ipynb (Раздел: Генерация файла H.matrix.py)
 Копия файла из каталога OpenCompendium/RnD-PhD/notebooks/dynamic.ipynb     ycharmProjects/PythonCompendium/DissertationPhd/storage/observability_mapping_partial_derivatives.py
-'''
+"""
 import numpy as np
 from symbolic import *
 
 def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
-    '''Возвращает элемент матрицы Н в L_z^(c/d) строк и 6/13 столбцов.
+    """Возвращает элемент матрицы Н в L_z^(c/d) строк и 6/13 столбцов.
     Столбец элемента матрицы H определяет только i_x. Остальные параметры определяют строку.
     :param i_x: Номер чипсата, у которого оценивается вектор-состояние (N вширь всей матрицы H)
     :param i_y: Номер чипсата/кубсата, от которого идёт сигнал (M / N(N-1) ввысь половины матрицы H)
@@ -29,7 +29,7 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
     :param t: Текущее время
     :param q1: Кватернион 1-го КА (опционально)
     :param q2: Кватернион 2-го КА (опционально)
-    '''
+    """
 
     ff_sequence = []  # Последовательность номеров непустых столбцов, длина ff_sequence - кол-во строк нижней подматицы
     for i_f1 in range(fn):
