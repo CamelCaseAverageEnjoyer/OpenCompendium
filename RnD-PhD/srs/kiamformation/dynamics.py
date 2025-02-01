@@ -135,9 +135,15 @@ def rk4_translate(v_: Variables, obj: Union[CubeSat, FemtoSat], i: int, dt: floa
 
 
 # >>>>>>>>>>>> Вращательное движение, интегрирование <<<<<<<<<<<<
-def get_torque(v: Variables, obj: Apparatus, q, w):
+def get_torque(v: Variables, obj: Apparatus, q, w, t, i):
     """Вектор внешнего углового ускорения"""
-    return np.zeros(3)
+    q = obj.q if q is None else q
+    w = obj.w_irf if w is None else w
+    U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
+    m_grav = np.zeros(3)
+    # J = obj.J
+    J = A.T @ obj.J @ A
+    return inv(J) @ (m_grav - cross(w, J @ w))
 
 def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):
     """При численном моделировании qw передаётся 1 numpy.ndarray;
@@ -146,7 +152,7 @@ def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):
 
     # U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
 
-    e = get_torque(v=v, obj=obj, q=q, w=w)
+    e = get_torque(v=v, obj=obj, q=q, w=w, t=t, i=i)
     dq = 1 / 2 * q_dot(q, quat(w))
     # J = A.T @ obj.J @ A
     J = obj.J
@@ -254,6 +260,7 @@ class PhysicModel:
         self.spacecrafts_cd = [self.c, self.f]
         self.spacecrafts_all = [self.a, self.c, self.f]
         self.time_begin = datetime.now()
+        self.time_to_navigate_remain = 0.  # Костыль
 
         # Инициализация фильтра
         self.k = KalmanFilter(f=f, c=c, p=self)
@@ -342,7 +349,11 @@ class PhysicModel:
 
         # Навигация чипсатов
         if self.v.IF_NAVIGATION:
-            navigate(k=self.k)
+            if self.time_to_navigate_remain <= 0:
+                self.time_to_navigate_remain = self.v.dT_nav
+                navigate(k=self.k)
+            else:
+                self.time_to_navigate_remain -= self.v.dT
 
         # Запись параметров
         self.do_report()

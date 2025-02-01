@@ -12,7 +12,7 @@ def local_dipole(v: Variables, r, ind: str = 'x', model = 'half-wave dipol'):
     :param model: """
     if ind not in ['x', 'y', 'z']:
         raise ValueError(f"Координата «{ind}» должна быть среди: [x, y, z]")
-    r_antenna_brf = vec_type([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')]) * 1.
+    r_antenna_brf = vec_type([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')], b=r[0]) * 1.
     r_12 = r / norm(r)
 
     # v.DISTORTION = 0.1

@@ -34,7 +34,8 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
                     # >>>>>>>>>>>> Расчёт положений и ориентаций <<<<<<<<<<<<
                     if produce:
                         dr = obj2.r_orf[i_2] - obj1.r_orf[i_1]
-                        p.record.loc[p.iter, f'{obj1.name}-{obj2.name} RealDistance {i_1} {i_2}'] = np.linalg.norm(dr)
+                        if isinstance(dr, np.ndarray):
+                            p.record.loc[p.iter, f'{obj1.name}-{obj2.name} RealDistance {i_1} {i_2}'] = norm(dr)
                         S_1 = quart2dcm(obj1.q[i_1]) @ get_U(obj1, i_1, t).T
                         S_2 = quart2dcm(obj2.q[i_2]) @ get_U(obj2, i_2, t).T
                     else:
@@ -71,7 +72,7 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
                         # >>>>>>>>>>>> Запись <<<<<<<<<<<<
                         o_fr, i_fr = (obj1, i_1) if direction == "1->2" else (obj2, i_2)
                         o_to, i_to = (obj1, i_1) if direction == "2->1" else (obj2, i_2)
-                        if produce:
+                        if produce and isinstance(dr, np.ndarray):
                             p.record.loc[p.iter, f'{o_fr.name}-{o_to.name} EstimateDistance {i_fr} {i_to}'] = est_dr
                             p.record.loc[p.iter, f'{o_fr.name}-{o_to.name} ErrorEstimateDistance {i_fr} {i_to}'] = \
                                 abs(est_dr - norm(dr))

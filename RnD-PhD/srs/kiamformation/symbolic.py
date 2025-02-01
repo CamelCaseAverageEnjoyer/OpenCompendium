@@ -76,7 +76,9 @@ def norm(a):
 def inv(a):
     return np.linalg.inv(a) if isinstance(a, int | float | np.ndarray) else a.inv()
 
-def vec_type(a):
+def vec_type(a, b=None):
+    if b is not None:
+        return np.array(a) if (isinstance(b, int | float | np.ndarray)) else sympy.Matrix(a)
     try:
         return np.array(a) if (isinstance(a[0][0], int | float | np.ndarray)) else sympy.Matrix(a)
     except:

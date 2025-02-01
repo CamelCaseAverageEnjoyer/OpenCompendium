@@ -16,7 +16,7 @@ class Variables:
         p = " ".join([str(i) for i in self.KALMAN_COEF['p']])
         rvw_cubesat = " ".join([str(i) for i in self.RVW_CubeSat_SPREAD])
         rvw_chipsat = " ".join([str(i) for i in self.RVW_ChipSat_SPREAD])
-        return [self.DESCRIPTION, self.dT, self.TIME, self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT,
+        return [self.DESCRIPTION, self.dT, self.dT_nav, self.TIME, self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT,
                 self.DYNAMIC_MODEL['aero drag'], self.DYNAMIC_MODEL['j2'],
                 self.NAVIGATION_BY_ALL, self.NAVIGATION_ANGLES, self.MULTI_ANTENNA_TAKE, self.MULTI_ANTENNA_SEND,
                 self.START_NAVIGATION_N, self.GAIN_MODEL_C_N, self.GAIN_MODEL_F_N, self.IF_NAVIGATION,
@@ -26,7 +26,7 @@ class Variables:
     def set_saving_params(self, params):
         """Функция принимает набор параметров из файла
         Должно быть согласовано с: self.get_saving_params(), config_choose.csv"""
-        self.DESCRIPTION, self.dT, self.TIME, self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT, aero, j2, \
+        self.DESCRIPTION, self.dT, self.dT_nav, self.TIME, self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT, aero, j2, \
             self.NAVIGATION_BY_ALL, self.NAVIGATION_ANGLES, self.MULTI_ANTENNA_TAKE, self.MULTI_ANTENNA_SEND, \
             self.START_NAVIGATION_N, self.GAIN_MODEL_C_N, self.GAIN_MODEL_F_N, self.IF_NAVIGATION, \
             self.CUBESAT_MODEL_N, self.CHIPSAT_MODEL_N, q, p, r, rvw_cubesat, rvw_chipsat, self.DEPLOYMENT_N = params
@@ -84,7 +84,8 @@ class Variables:
         self.path_config_data = self.path_sources + "config_choose.csv"
         self.DESCRIPTION = "По умолчанию"
 
-        self.dT = 10.
+        self.dT = 1.
+        self.dT_nav = 10.
         self.TIME = 1e4
         self.CUBESAT_AMOUNT = 1
         self.CHIPSAT_AMOUNT = 1
@@ -258,6 +259,7 @@ class Objects:
                 my_print(f"Вариант отделения дочерних КА: {self.v.DEPLOYMENT}", color='m')
                 my_print(f"Внимание: IF_NAVIGATION={self.v.IF_NAVIGATION}! ", color='m',
                          if_print=not self.v.IF_NAVIGATION)
+                my_print(f"Шаг моделирования: {self.v.dT}, шаг навигации: {self.v.dT_nav}")
             if i / n > (flag[0] + 0.1):
                 flag[0] += 0.1
                 per = int(10 * i / n)

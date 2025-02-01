@@ -86,7 +86,6 @@ class KalmanFilter:
     def get_Phi(self, w=None, w0=None):
         w0 = self.v.W_ORB if w0 is None else w0
         w = [self.f.apriori_params['w irf'][i] for i in range(self.f.n)] if w is None else w
-        # print(f"w: {w}, w0: {w0}")
         return bmat([[np.zeros([self.j, self.j])] * i + [self.get_Phi_1(w=w[i], w0=w0)] +
                      [np.zeros([self.j, self.j])] * (self.f.n - i - 1) for i in range(self.f.n)])
 

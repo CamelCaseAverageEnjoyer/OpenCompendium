@@ -157,8 +157,11 @@ class Window(QWidget):
 
         # Первый столбец - выбор из вариантов
         y = 1
-        self.name_type_func[y][n+0] = ["Шаг по времени dT", "label", None, (1, 1)]
+        self.name_type_func[y][n+0] = ["Шаг интегрирования dT", "label", None, (1, 1)]
         self.name_type_func[y][n+1] = ["dT", f"combo;{params['dT']}", ";".join(self.o.v.dTs), (1, 1)]
+        y += 1
+        self.name_type_func[y][n+0] = ["Шаг навигации dT_nav", "label", None, (1, 1)]
+        self.name_type_func[y][n+1] = ["dT_nav", f"combo;{params['dT_nav']}", ";".join(self.o.v.dTs), (1, 1)]
         y += 1
         self.name_type_func[y][n+0] = ["Время интегрирования T", "label", "", (1, 1)]
         self.name_type_func[y][n+1] = ["TIME", f"combo;{params['TIME']}", ";".join(self.o.v.Ts), (1, 1)]
@@ -288,6 +291,7 @@ class Window(QWidget):
             self.o.v.DESCRIPTION = self.textboxes['Параметры'].text()
 
         self.o.v.dT = float(self.comboboxes['dT'].currentText())
+        self.o.v.dT_nav = float(self.comboboxes['dT_nav'].currentText())
         self.o.v.TIME = float(self.comboboxes['TIME'].currentText())
         self.o.v.START_NAVIGATION = self.comboboxes['START_NAVIGATION_N'].currentText()
         self.o.v.START_NAVIGATION_N = self.o.v.NAVIGATIONS.index(self.o.v.START_NAVIGATION)

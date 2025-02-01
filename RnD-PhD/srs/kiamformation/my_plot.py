@@ -33,8 +33,8 @@ def plot_distance(o):
                               "Ошибка дистанции, оцениваемая на борту",
                               "Ошибка определения положения Δr"],
                       "eng": ["Real distance error",
-                              "Estimated distance error",
-                              "Estimated position error Δr"]}[o.v.LANGUAGE] \
+                              "Predicted measurement error difference Δᵖʳᵉᵈⁱᶜᵗ",
+                              "Error of estimated position Δr"]}[o.v.LANGUAGE] \
                 if i_f == 0 else [None for _ in range(100)]
             # y1 = o.p.record[f'{o.c.name}-{o.f.name} ErrorEstimateDistance {i_c} {i_f}'].to_list()
             # y11 = o.p.record[f'{o.c.name}-{o.f.name} ErrorEstimateDistance 1 {i_c} {i_f}'].to_list()
