@@ -31,7 +31,7 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
     :param q1: Кватернион 1-го КА (опционально)
     :param q2: Кватернион 2-го КА (опционально)
     '''
-    from symbolic import pi as pi_func
+    from symbolic import pi
 
     ff_sequence = []  # Последовательность номеров непустых столбцов, длина ff_sequence - кол-во строк нижней подматицы
     for i_f1 in range(fn):
@@ -52,7 +52,7 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
         q2_x, q2_y, q2_z = q2
         q2_0 = 1 - sqrt(q2_x**2 + q2_y**2 + q2_z**2)
     ω_0 = w_0
-    pi = pi_func(r1_x)
+    pi = pi(r1_x)
 
     if angles_navigation:
         s1_11 = 1.0 * (2 * q1_x * q1_y + 2 * q1_z * sqrt(-q1_x ** 2 - q1_y ** 2 - q1_z ** 2 + 1)) * cos(
@@ -553,7 +553,9 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
     :param q_c: Вектор-часть кватернионов кубсатов (опционально)
     :return: Матрица частных производных H. Отображение состояния в измерения
     ''' 
-    from sympy import var
+    from sympy import var, Matrix
+    from spacecrafts import get_gain
+    from symbolic import zeros
 
     fn = f.n
     cn = c.n
@@ -581,12 +583,12 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
         row = []
         for i_f in range(fn):
             if return_template:
-                row.append(var(f'cd_' + str(i_c) + '^' + str(i_f)))
+                row.append(Matrix([var('c_{' + str(i_c) + '}d_{' + str(i_f) + '}')]))
             else:
                 row.append(h_element(i_x=None, i_y=None, i_n=None, i=i_c, j=i_f, gm_1=c_g, gm_2=f_g, fn=fn, cn=cn, relation='cd', angles_navigation=angles_navigation, r_f=r_f, r1=r_c[i_c], r2=r_f[i_f], q_f=q_f, q1=q_c[i_c], q2=q_f[i_f], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
                 
         row = block_diag(*row)
-        H_cd = row if H_cd is None else vstack([H_cd, row])
+        H_cd = row if H_cd is None else vstack(H_cd, row)
 
     # >>>>>>>>>>>> Нижняя подматрица <<<<<<<<<<<<
     H_dd = None
@@ -596,18 +598,16 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
             if i_x in ff_sequence[i_y]:
                 i_1, i_2 = ff_sequence[i_y] if i_x == ff_sequence[i_y][0] else ff_sequence[i_y][::-1]  # Я тут не перепутал????????
                 if return_template:
-                    row.append(var(f'dd_' + str(i_1) + '^' + str(i_2)))
+                    row.append(Matrix([var('d_{' + str(i_1) + '}d_{' + str(i_2) + '}')]))
                 else:
                     row.append(h_element(i_x=None, i_y=None, i_n=None, i=i_1, j=i_2, gm_1=f_g, gm_2=f_g, fn=fn, cn=cn, relation="dd", angles_navigation=angles_navigation, r_f=r_f, r1=r_f[i_1], r2=r_f[i_2], q_f=q_f, q1=q_f[i_1], q2=q_f[i_2], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
-                    # ОСТАНОВИЛСЯ ТУТ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             else:
                 if return_template:
-                    row.append(0)
+                    row.append(Matrix([0]))
                 else:
-                    tmp = np.zeros((f_take_len * f_send_len, int((f.n * (f.n - 1) * f_take_len*f_send_len) // 2)))
-                    row.append(tmp)
+                    row.append(zeros((f_take_len * f_send_len, 12 if angles_navigation else 6), template=w_0))
         row = bmat(row)
-        H_dd = row if H_dd is None else vstack([H_dd, row])   
+        H_dd = row if H_dd is None else vstack(H_dd, row)
 
-    # >>>>>>>>>>>> Компоновка <<<<<<<<<<<<
-    return vstack([H_cd, H_dd]) if H_dd is not None else H_cd
+    # >>>>>>>>>>>> Компановка <<<<<<<<<<<<
+    return vstack(H_cd, H_dd) if H_dd is not None else H_cd

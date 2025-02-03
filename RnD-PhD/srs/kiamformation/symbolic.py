@@ -64,11 +64,15 @@ def mean(a):
     return np.mean(a) if isinstance(a[0], int | float | np.ndarray) else sympy_mean(a)
 
 def vstack(*args):
-    return np.vstack(*args) if isinstance(args[0][0], int | float | np.ndarray) else sympy.Matrix.vstack(*args)
+    return np.vstack(args) if isinstance(args[0][0], int | float | np.ndarray) else sympy.Matrix.vstack(*args)
 
 def bmat(*args):
-    return np.bmat(*args) if isinstance(args[0][0][0], int | float | np.ndarray) else \
-        sympy.Matrix(sympy.BlockMatrix(*args))
+    try:
+        return np.bmat(*args) if isinstance(args[0][0][0], int | float | np.ndarray) else \
+            sympy.Matrix(sympy.BlockMatrix(*args))
+    except:
+        return np.bmat(*args) if isinstance(args[0][0], int | float | np.ndarray) else \
+            sympy.Matrix(sympy.BlockMatrix(*args))
 
 def norm(a):
     return np.linalg.norm(a) if isinstance(a, int | float | np.ndarray | list) else sympy_norm(a)
@@ -94,6 +98,10 @@ def block_diag(*args):
     import scipy
     return scipy.linalg.block_diag(*args) if isinstance(args[0], np.ndarray) else \
         sympy.Matrix(sympy.BlockDiagMatrix(*args))
+
+def zeros(dims, template):
+    return np.zeros(dims) if isinstance(template, int | float | np.ndarray) else \
+        sympy.zeros(*dims)
 
 
 """def numerical_and_symbolic_polymorph(trigger_var, trigger_type, trigger_out, not_trigger_out=None):

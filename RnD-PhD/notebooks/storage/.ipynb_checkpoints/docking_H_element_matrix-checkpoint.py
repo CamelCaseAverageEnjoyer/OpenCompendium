@@ -30,6 +30,7 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
     :param q1: Кватернион 1-го КА (опционально)
     :param q2: Кватернион 2-го КА (опционально)
     '''
+    from symbolic import pi
 
     ff_sequence = []  # Последовательность номеров непустых столбцов, длина ff_sequence - кол-во строк нижней подматицы
     for i_f1 in range(fn):
@@ -52,26 +53,7 @@ def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angle
     ω_0 = w_0
     pi = pi(r1_x)
 
-    # to_replace
-    if angles_navigation:
-        s1_11 = 1.0*(2*q1_x*q1_y + 2*q1_z*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1))*cos(t*ω_0) - 1.0*(-2*q1_y**2 - 2*q1_z**2 + 1)*sin(t*ω_0)
-        s1_12 = 2.0*q1_x*q1_z - 2.0*q1_y*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1)
-        s1_13 = 1.0*(2*q1_x*q1_y + 2*q1_z*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1))*sin(t*ω_0) + 1.0*(-2*q1_y**2 - 2*q1_z**2 + 1)*cos(t*ω_0)
-        s1_21 = -1.0*(2*q1_x*q1_y - 2*q1_z*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1))*sin(t*ω_0) + 1.0*(-2*q1_x**2 - 2*q1_z**2 + 1)*cos(t*ω_0)
-        s1_22 = 2.0*q1_x*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1) + 2.0*q1_y*q1_z
-        s1_23 = 1.0*(2*q1_x*q1_y - 2*q1_z*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1))*cos(t*ω_0) + 1.0*(-2*q1_x**2 - 2*q1_z**2 + 1)*sin(t*ω_0)
-        s1_31 = -1.0*(2*q1_x*q1_z + 2*q1_y*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1))*sin(t*ω_0) + 1.0*(-2*q1_x*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1) + 2*q1_y*q1_z)*cos(t*ω_0)
-        s1_32 = -2.0*q1_x**2 - 2.0*q1_y**2 + 1.0
-        s1_33 = 1.0*(2*q1_x*q1_z + 2*q1_y*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1))*cos(t*ω_0) + 1.0*(-2*q1_x*sqrt(-q1_x**2 - q1_y**2 - q1_z**2 + 1) + 2*q1_y*q1_z)*sin(t*ω_0)
-        s2_11 = 1.0*(2*q2_x*q2_y + 2*q2_z*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1))*cos(t*ω_0) - 1.0*(-2*q2_y**2 - 2*q2_z**2 + 1)*sin(t*ω_0)
-        s2_12 = 2.0*q2_x*q2_z - 2.0*q2_y*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1)
-        s2_13 = 1.0*(2*q2_x*q2_y + 2*q2_z*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1))*sin(t*ω_0) + 1.0*(-2*q2_y**2 - 2*q2_z**2 + 1)*cos(t*ω_0)
-        s2_21 = -1.0*(2*q2_x*q2_y - 2*q2_z*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1))*sin(t*ω_0) + 1.0*(-2*q2_x**2 - 2*q2_z**2 + 1)*cos(t*ω_0)
-        s2_22 = 2.0*q2_x*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1) + 2.0*q2_y*q2_z
-        s2_23 = 1.0*(2*q2_x*q2_y - 2*q2_z*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1))*cos(t*ω_0) + 1.0*(-2*q2_x**2 - 2*q2_z**2 + 1)*sin(t*ω_0)
-        s2_31 = -1.0*(2*q2_x*q2_z + 2*q2_y*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1))*sin(t*ω_0) + 1.0*(-2*q2_x*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1) + 2*q2_y*q2_z)*cos(t*ω_0)
-        s2_32 = -2.0*q2_x**2 - 2.0*q2_y**2 + 1.0
-        s2_33 = 1.0*(2*q2_x*q2_z + 2*q2_y*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1))*cos(t*ω_0) + 1.0*(-2*q2_x*sqrt(-q2_x**2 - q2_y**2 - q2_z**2 + 1) + 2*q2_y*q2_z)*sin(t*ω_0)
+    <to_replace>
     
     if angles_navigation:
         swt = sin(t*w_0)

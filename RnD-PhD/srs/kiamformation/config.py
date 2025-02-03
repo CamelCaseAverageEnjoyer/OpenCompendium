@@ -245,6 +245,7 @@ class Objects:
         n = int(t // self.v.dT)
         flag = [0., 0.]
         frames = []
+        time_begin = datetime.now()
         for i in range(n):
             # Отображение в вывод
             if i == 1 and self.v.IF_ANY_PRINT:
@@ -264,7 +265,7 @@ class Objects:
                 flag[0] += 0.1
                 per = int(10 * i / n)
                 my_print(f"{10 * per}% [{'#' * per + ' ' * (10 - per)}]" +
-                         real_workload_time(n=per, n_total=10, time_begin=self.p.time_begin,
+                         real_workload_time(n=per, n_total=10, time_begin=time_begin,
                                             time_now=datetime.now()), color='m', if_print=self.v.IF_ANY_PRINT)
 
             # Отображение в анимацию

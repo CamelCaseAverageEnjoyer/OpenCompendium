@@ -259,7 +259,6 @@ class PhysicModel:
         self.a = a
         self.spacecrafts_cd = [self.c, self.f]
         self.spacecrafts_all = [self.a, self.c, self.f]
-        self.time_begin = datetime.now()
         self.time_to_navigate_remain = 0.  # Костыль
 
         # Инициализация фильтра
@@ -349,9 +348,9 @@ class PhysicModel:
 
         # Навигация чипсатов
         if self.v.IF_NAVIGATION:
+            navigate(k=self.k, if_correction=self.time_to_navigate_remain <= 0.)
             if self.time_to_navigate_remain <= 0:
-                self.time_to_navigate_remain = self.v.dT_nav
-                navigate(k=self.k)
+                self.time_to_navigate_remain = self.v.dT_nav - self.v.dT
             else:
                 self.time_to_navigate_remain -= self.v.dT
 
@@ -413,4 +412,4 @@ class PhysicModel:
                             d.loc[i_t, f'{obj.name} KalmanQuatEstimation {c} {i_n}'] = q_irf_estimation[i_r]
                             d.loc[i_t, f'{obj.name} KalmanQuatError {c} {i_n}'] = q_irf_estimation[i_r] - q_irf[i_r]
 
-        d = d.astype({'i': 'int32', 'FemtoSat n': 'int32', 'CubeSat n': 'int32'})
+        # d = d.astype({'i': 'int32', 'FemtoSat n': 'int32', 'CubeSat n': 'int32'})

@@ -29,29 +29,19 @@ def plot_distance(o):
 
     for i_c in range(o.c.n):
         for i_f in range(o.f.n):
-            labels = {"рус": ["Ошибка дистанции (реальная)",
-                              "Ошибка дистанции, оцениваемая на борту",
+            labels = {"рус": ["Ошибка дистанции, оцениваемая на борту",
                               "Ошибка определения положения Δr"],
-                      "eng": ["Real distance error",
-                              "Predicted measurement error difference Δᵖʳᵉᵈⁱᶜᵗ",
+                      "eng": ["Predicted measurement error difference Δᵖʳᵉᵈⁱᶜᵗ",
                               "Error of estimated position Δr"]}[o.v.LANGUAGE] \
                 if i_f == 0 else [None for _ in range(100)]
-            # y1 = o.p.record[f'{o.c.name}-{o.f.name} ErrorEstimateDistance {i_c} {i_f}'].to_list()
-            # y11 = o.p.record[f'{o.c.name}-{o.f.name} ErrorEstimateDistance 1 {i_c} {i_f}'].to_list()
-            # y12 = o.p.record[f'{o.c.name}-{o.f.name} ErrorEstimateDistance 2 {i_c} {i_f}'].to_list()
+            max_y2 = 0.
             for jj in range(int(o.p.record[f'ZModel&RealDifference N'][1])):
                 y2 = o.p.record[f'ZModel&RealDifference {jj}'].to_list()
-                axes[0].plot(x, y2, c=o.v.MY_COLORS[6], label=labels[1] if i_c == 0 and jj == 0 else None, lw=1)
-            # y21 = o.p.record[f'ZModel&RealDifference min'].to_list()
-            # y22 = o.p.record[f'ZModel&RealDifference max'].to_list()
+                max_y2 = max(max_y2, max(y2))
+                axes[0].plot(x, y2, c=o.v.MY_COLORS[6], label=labels[0] if i_c == 0 and jj == 0 else None, lw=1)
             y3 = o.p.record[f'{o.f.name} KalmanPosError r {i_f}'].to_list()
-            # axes[0].plot(x, y1, c=o.v.MY_COLORS[3], label=labels[0] if i_c == 0 else None)
-            # axes[0].plot(x, y11, c=o.v.MY_COLORS[3], ls=":")
-            # axes[0].plot(x, y12, c=o.v.MY_COLORS[3], ls=":")
-            # axes[0].plot(x, y21, c=o.v.MY_COLORS[6], ls=":")
-            # axes[0].plot(x, y22, c=o.v.MY_COLORS[6], ls=":")
-            axes[0].plot(x, y3, c=o.v.MY_COLORS[2], label=labels[2] if i_c == 0 else None)
-            m = max(m, max(y2), max(y3))
+            axes[0].plot(x, y3, c=o.v.MY_COLORS[2], label=labels[1] if i_c == 0 else None)
+            m = max(m, max_y2, max(y3))
     axes[0].set_xlabel(label_time, fontsize=CAPTION_SIZE)
     axes[0].set_ylabel({"рус": f"Ошибка, м", "eng": f"Distance error, m"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
     axes[0].legend(fontsize=CAPTION_SIZE)
