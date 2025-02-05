@@ -2,9 +2,7 @@ import numpy as np
 import sympy
 
 def get_vars(name: str, n: int, numb: bool = True):
-    """Генерит символьные переменные"""
     from sympy import var, Matrix
-
     s = ""
     axis = ["x", "y", "z"] if n == 3 else [0, "x", "y", "z"]
     for i in range(n):
@@ -13,7 +11,6 @@ def get_vars(name: str, n: int, numb: bool = True):
     return Matrix(var(s, real=True))
 
 def get_func(name: str, n: int, numb: bool = True, t=None):
-    """Генерит символьные функции"""
     from sympy import Function, Matrix
 
     axis = ["x", "y", "z"] if n == 3 else [0, "x", "y", "z"]

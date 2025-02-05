@@ -22,8 +22,8 @@ class KalmanFilter:
     """Оцениваемые параметры: ['r orf', 'q-3 irf', 'v orf', 'w irf']; согласовано с spacecrafts.py"""
     def __init__(self, f: FemtoSat, c: CubeSat, p: any):
         # Общие параметры
-        self.f = f  # Фемтоспутники
-        self.c = c  # Кубсаты
+        self.f = f  # Дочерние КА
+        self.c = c  # Материнские КА
         self.p = p  # Динамическая модель
         self.v = p.v
 
@@ -43,15 +43,14 @@ class KalmanFilter:
         self.Phi = self.get_Phi(w=None, w0=None)
 
         # Расширешние на учёт несколько аппаратов в фильтре
-        if self.v.NAVIGATION_BY_ALL:
-            tmp = 6 if self.v.NAVIGATION_ANGLES else 3
-            self.Q = np.bmat([[np.zeros([tmp, tmp])] * i + [self.Q] +
-                              [np.zeros([tmp, tmp])] * (self.f.n - i - 1) for i in range(self.f.n)])
-            self.P = np.bmat([[np.zeros([self.j, self.j])] * i + [self.P[i]] +
-                              [np.zeros([self.j, self.j])] * (self.f.n - i - 1) for i in range(self.f.n)])
-            self.D = np.bmat([[np.zeros([self.j, tmp])] * i + [self.D] +
-                              [np.zeros([self.j, tmp])] * (self.f.n - i - 1)
-                              for i in range(self.f.n)])
+        tmp = 6 if self.v.NAVIGATION_ANGLES else 3
+        self.Q = np.bmat([[np.zeros([tmp, tmp])] * i + [self.Q] +
+                          [np.zeros([tmp, tmp])] * (self.f.n - i - 1) for i in range(self.f.n)])
+        self.P = np.bmat([[np.zeros([self.j, self.j])] * i + [self.P[i]] +
+                          [np.zeros([self.j, self.j])] * (self.f.n - i - 1) for i in range(self.f.n)])
+        self.D = np.bmat([[np.zeros([self.j, tmp])] * i + [self.D] +
+                          [np.zeros([self.j, tmp])] * (self.f.n - i - 1)
+                          for i in range(self.f.n)])
 
         # Вывод
         if self.v.IF_TEST_PRINT:
@@ -125,7 +124,7 @@ class KalmanFilter:
         d = self.params_vec2dict()
         return d[v][i_f]
 
-    def calc(self, if_correction: bool) -> None:  # Считается, что NAVIGATION_BY_ALL = True
+    def calc(self, if_correction: bool) -> None:
         from primary_info import measure_antennas_power
         from dynamics import rk4_translate, rk4_attitude
 
@@ -147,22 +146,9 @@ class KalmanFilter:
                      color='r', if_print=p.iter == 1 and v.IF_TEST_PRINT)
 
         # >>>>>>>>>>>> Этап экстраполяции <<<<<<<<<<<<
-        # nav_rate = int(v.dT_nav / v.dT)
         d = self.params_vec2dict()
 
         # Моделирование орбитального движения на dT -> вектор состояния x_m
-        # r_orf, v_orf, w_irf, q_irf = [], [], [], []
-        # for i in range(f.n):
-        #     r, vel, q, w = d['r orf'][i], d['v orf'][i], d['q-3 irf'][i], d['w irf'][i]
-        #     for ii in range(nav_rate):
-        #         r, vel = rk4_translate(v_=v, obj=f, i=i, r=r, v=vel)
-        #         q, w = rk4_attitude(v_=v, obj=f, i=i, t=self.p.t, q=q, w=w)
-        #     r_orf.append(r)
-        #     v_orf.append(vel)
-        #     w_irf.append(q)
-        #     q_irf.append(w)
-        # x_m = self.params_dict2vec(d={'r orf': r_orf, 'v orf': v_orf, 'q-3 irf': q_irf, 'w irf': w_irf},
-        #                            separate_spacecraft=False)
         rv_m = [rk4_translate(v_=v, obj=f, i=i, r=d['r orf'][i], v=d['v orf'][i]) for i in range(f.n)]
         qw_m = [rk4_attitude(v_=v, obj=f, i=i, t=self.p.t, q=d['q-3 irf'][i], w=d['w irf'][i]) for i in range(f.n)]
         x_m = self.params_dict2vec(d={'r orf': [rv_m[i][0] for i in range(f.n)],
@@ -178,35 +164,25 @@ class KalmanFilter:
 
         # Измерения согласно модели
         z_model, notes3 = measure_antennas_power(c=c, f=f, v=v, p=p, j=j, estimated_params=x_m)
-        # for ii in range(nav_rate):
         p.record.loc[p.iter, f'ZModel&RealDifference'] = np.abs(z_model - z_).mean()
         p.record.loc[p.iter, f'ZModel&RealDifference min'] = np.abs(z_model - z_).min()
         p.record.loc[p.iter, f'ZModel&RealDifference max'] = np.abs(z_model - z_).max()
         p.record.loc[p.iter, f'ZModel&RealDifference N'] = len(z_model)
         for i in range(len(z_model)):
             p.record.loc[p.iter, f'ZModel&RealDifference {i}'] = np.abs(z_model - z_)[i]
-        # my_print(f"{z_} & {z_model}", color='r', if_print=self.p.iter == 1)
 
         if if_correction:
             # >>>>>>>>>>>> Этап коррекции <<<<<<<<<<<<
-            # Расчёт матриц
             self.Phi = self.get_Phi(w=None, w0=None)
             Q_tilda = self.Phi @ self.D @ self.Q @ self.D.T @ self.Phi.T * v.dT
             P_m = self.Phi @ self.P @ self.Phi.T + Q_tilda
             H = h_matrix(t=p.t, v=v, f=f, c=c, r_f=d['r orf'], r_c=c.r_orf,
                          q_f=d['q-3 irf'], q_c=[c.q[i].vec for i in range(c.n)])
-            # my_print(f"H (t = {p.t}) (shape={H.shape}) = \n{H}\n", color='r')
 
             R = np.eye(z_len) * v.KALMAN_COEF['r']
             k_ = P_m @ H.T @ np.linalg.inv(H @ P_m @ H.T + R)
             self.P = (np.eye(j * f.n) - k_ @ H) @ P_m
-            # print(f"P = \n{self.P}\n\n")
             raw_estimation_params = np.array(np.matrix(x_m) + k_ @ (z_ - z_model))[0]
-            # raw_estimation_params = x_m  # Дл тестов: выключить коррекцию
-            # raw_estimation_params[0:3] = x_m[0:3]  # r
-            # raw_estimation_params[6:9] = x_m[6:9]  # v
-            # raw_estimation_params[3:6] = x_m[3:6]  # q
-            # raw_estimation_params[9:12] = x_m[9:12]  # w
         else:
             raw_estimation_params = x_m
 
@@ -229,12 +205,13 @@ class KalmanFilter:
 
         # Запись и отображение
         if p.iter == 1:
-            my_print(f"P_m: {P_m.shape}, H: {R.shape}, P_m: {R.shape}")
+            if if_correction:
+                my_print(f"P-: {P_m.shape}, H.T: {H.T.shape}, H: {H.shape}, R: {R.shape}", color='g')
+                my_print(f"x-: {np.matrix(x_m).shape}, K: {k_.shape}, z: {(z_ - z_model).shape}", color='g')
             my_print(f"R-notes: {notes1}", color='y')
             my_print(f"Длина длин: {len(z_)}", color='r', if_print=v.IF_TEST_PRINT)
             my_print(f"M-notes: {notes3}", color='y')
             my_print(f"Длина модельных длин: {len(z_model)}", color='r', if_print=v.IF_TEST_PRINT)
-            # my_print(f"H-notes: {notesH}", color='y')
             with open("kiamformation/data/measures_vector_notes_last.txt", "w") as f:
                 f.write("# Рассчитано в PyCharm\n# Параметры: {rel} {N_1} {N_2} {i_1} {i_2} {send_len} {take_len}\n")
                 f.write(f"# Параметр CUBESAT_AMOUNT {v.CUBESAT_AMOUNT}\n")
@@ -247,8 +224,6 @@ class KalmanFilter:
                 for j in range(z_len):
                     f.write(f"{v.MEASURES_VECTOR_NOTES[j]}\n")
             my_print(f"P: {self.v.KALMAN_COEF['p']}, Q: {self.v.KALMAN_COEF['q']}", color='g')
-            my_print(f"P-: {P_m.shape}, H.T: {H.T.shape}, H: {H.shape}, R: {R.shape}", color='g')
-            my_print(f"x-: {np.matrix(x_m).shape}, K: {k_.shape}, z: {(z_ - z_model).shape}", color='g')
             my_print(f"estimation_params: {raw_estimation_params.shape}", color='g')
 
 

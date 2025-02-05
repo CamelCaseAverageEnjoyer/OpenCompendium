@@ -33,7 +33,6 @@ def my_cross(a, b):
 def matrix2angle(M):
     if isinstance(M, np.ndarray):
         return np.cos(quaternion.np.angle_of_rotor(quaternion.from_rotation_matrix(M)))
-        # clip((np.trace(M) - 1) / 2, -1, 1)
     else:
         from sympy import Trace
         return ((Trace(M) - 1) / 2).simplify()

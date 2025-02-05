@@ -4,53 +4,56 @@ from config import Variables
 from symbolic import *
 
 # >>>>>>>>>>>> Диаграмма направленности антенн связи <<<<<<<<<<<<
-def local_dipole(v: Variables, r, ind: str = 'x', model = 'half-wave dipol'):
-    """Возвращает диаграмму направленности одной полуволновой антенны (бублик). Костыль: возвращается >= 0
+def local_dipole(v: Variables, r, ind: str = 'x', model='quarter-wave monopole'):
+    """Возвращает коэффициент усиления от 1-й антенны
     :param v: Объект класса Variables
-    :param r: Радиус-вектор направления антенны
-    :param ind: Координата направления антенны
+    :param r: Радиус-вектор между антенной-трансмиттером и антенной-ресивером в ССК
+    :param ind: Координата направления антенны-ресивера в ССК
     :param model: """
     if ind not in ['x', 'y', 'z']:
         raise ValueError(f"Координата «{ind}» должна быть среди: [x, y, z]")
-    r_antenna_brf = vec_type([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')], b=r[0]) * 1.
     r_12 = r / norm(r)
-
-    # v.DISTORTION = 0.1
-    # r_12 += np.array([0.03, 0.05, 0])
-    # r_12 = r / norm(r)
+    r_12 += np.array([0.03, 0.05, 0]) * v.DISTORTION  # Вручную задаваемое искажение диаграммы направленности
+    r_antenna_brf = vec_type([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')], b=r[0]) * 1.
     
     sin_theta = norm(my_cross(r_antenna_brf, r_12))
     cos_theta = dot(r_antenna_brf, r_12)
-    if model == 'half-wave dipol':
-        return cos(pi(r) / 2 * cos_theta) / sin_theta  # v.DISTORTION не используется !!!!!
-    return sin_theta
+    if model == 'half-wave dipole':
+        return cos(pi(r) / 2 * cos_theta) / sin_theta
+    if model == 'short dipole':
+        return sin_theta**2
+    if model == 'quarter-wave monopole':
+        return sin_theta**3
 
-def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False, multake=None, mulsend=None, gm=None):
-    """Внимание! Всё переделано - теперь возвращается только список для повышения градуса полиморфизма,
-    интуитивизма, индуизма, культуризма, конституционализма, шовинизма, каннибализма
+def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False,
+             multy_take=None, multy_send=None, gm=None):
+    """Возвращает вектор коэффициентов усиления от каждой антенны КА
     :param v: Объект класса Variables
     :param obj: Переменная класса Apparatus
-    :param r: Направление сигнала в СК антенны
+    :param r: Направление сигнала в ССК КА
     :param if_take: Флаг на принятый сигнал
-    :param if_send: Флаг на посланный сигнал"""
-    # Памятка: GAIN_MODES = ['isotropic', '1 antenna', '2 antennas', '3 antennas', 'ellipsoid']
-    multake = v.MULTI_ANTENNA_TAKE if multake is None else multake
-    mulsend = v.MULTI_ANTENNA_SEND if mulsend is None else mulsend
+    :param if_send: Флаг на посланный сигнал
+    :param multy_take: Разлагается ли сигнал на КА-ресивере (опционально)
+    :param multy_send: Разлагается ли сигнал на КА-трасмитере (опционально)
+    :param gm: Количество и тип антенн (опционально)"""
+    multy_take = v.MULTI_ANTENNA_TAKE if multy_take is None else multy_take
+    multy_send = v.MULTI_ANTENNA_SEND if multy_send is None else multy_send
     gm = obj.gain_mode if gm is None else gm
 
+    # Памятка: GAIN_MODES = ['isotropic', '1 antenna', '2 antennas', '3 antennas']
     if gm == v.GAIN_MODES[1]:
         return [local_dipole(v, r, 'x')]
     if gm == v.GAIN_MODES[2]:
-        if (if_take and multake) or (if_send and mulsend):
+        if (if_take and multy_take) or (if_send and multy_send):
             return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y')]
         return [local_dipole(v, r, 'x') + local_dipole(v, r, 'y')]
     if gm == v.GAIN_MODES[3]:
-        if (if_take and multake) or (if_send and mulsend):
+        if (if_take and multy_take) or (if_send and multy_send):
             return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y'), local_dipole(v, r, 'z')]
         return [local_dipole(v, r, 'x') + local_dipole(v, r, 'y') + local_dipole(v, r, 'z')]
-    if gm == v.GAIN_MODES[4]:
-        e = r / np.linalg.norm(r)
-        return [np.linalg.norm([e[0] * 1, e[1] * 0.7, e[2] * 0.8])]
+    # if gm == v.GAIN_MODES[4]:
+    #     e = r / np.linalg.norm(r)
+    #     return [np.linalg.norm([e[0] * 1, e[1] * 0.7, e[2] * 0.8])]
     return [1]
 
 
@@ -81,12 +84,6 @@ class Apparatus:
 
         # Индивидуальные параметры режимов работы
         self.operating_mode = [v.OPERATING_MODES[0] for _ in range(self.n)]
-
-        # Индивидуальные параметры измерений
-        '''
-        prm_good = [np.append(np.append(np.append(self.r_orf[i], self.q[i][1:4]), self.v_orf[i]), self.w_irf[i])
-                    for i in range(self.n)]
-        self.rv_orf_calc = [prm_good[i] for i in range(self.n)]'''
 
     def get_blown_surface(self, cos_alpha):
         return self.size[0] * self.size[1] * abs(cos_alpha) * self.c_resist
@@ -122,7 +119,7 @@ class Apparatus:
 
 class Anchor(Apparatus):
     def __init__(self, v: Variables):
-        """Класс фантомного КА, движущегося по орбите с нулевым разбросом скоростей и положений"""
+        """Класс мнимого КА, центр которого совпадает с центром ОСК"""
         super().__init__(v=v, n=1)
         self.name = "Anchor"
 
@@ -169,10 +166,9 @@ class CubeSat(Apparatus):
         self.r_orf = [v.spread('r', name=self.name) for _ in range(self.n)]
         self.v_orf = [v.spread('v', name=self.name) for _ in range(self.n)]
         self.w_orf = [np.zeros(3) for _ in range(self.n)]
-        # self.w_orf = [v.spread('w', name=self.name) for _ in range(self.n)]
+
         # Инициализируется автоматически
         self.q = [np.quaternion(1, 0, 0, 0) for _ in range(self.n)]
-        # self.q = [np.quaternion(*np.random.uniform(-1, 1, 4)) for _ in range(self.n)]
         self.init_correct_q_v(v=v)
         self.r_irf, self.v_irf, self.w_irf = [[np.zeros(3) for _ in range(self.n)] for _ in range(3)]
         self.update_irf_rv(v=v, t=0)
@@ -196,9 +192,9 @@ class FemtoSat(Apparatus):
         chipsat_property = {'KickSat': {'mass': 0.01,
                                         'mass_center_error': [0.001, -0.001],
                                         'dims': [0.03, 0.03]},
-                            '1.Трисат': {'mass': 0.1,
-                                         'mass_center_error': [0.005, 0.003],
-                                         'dims': [0.4, 0.15]}}
+                            'Трисат': {'mass': 0.1,
+                                       'mass_center_error': [0.005, 0.003],
+                                       'dims': [0.4, 0.15]}}
 
         # Общие параметры
         self.name = "FemtoSat"
@@ -242,12 +238,10 @@ class FemtoSat(Apparatus):
                                'q-3 irf': [self.q[i].vec * tol + self.q_[i].vec * (1 - tol) for i in range(self.n)]}
 
     def deploy(self, v: Variables, c: CubeSat, i_c: int) -> None:
-        """
-        Функция отделения задаёт начальные условия для дочерних КА из материнских КА
+        """Функция отделения задаёт начальные условия для дочерних КА из материнских КА
         :param v: объект Variables
         :param c: объект CubeSat
         :param i_c: id-номер материнского КА, от которого отделяются дочерние КА
-        :param spread: функция np.random.uniform
         :return: {'r orf': ..., 'v orf': ..., 'q-3 irf': ..., 'w irf': ...}, где значения - list of np.ndarray
         """
         if v.DEPLOYMENT == v.DEPLOYMENTS[0]:  # No

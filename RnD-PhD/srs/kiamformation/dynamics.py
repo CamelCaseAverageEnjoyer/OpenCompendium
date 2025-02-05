@@ -95,7 +95,6 @@ def get_aero_drag_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, rho
     Внимание! При параметре vrs.SOLVER='hkw' возвращает ускорение в ОСК, иначе в ИСК!"""
     S = quart2dcm(obj.q[i])
     cos_alpha = matrix2angle(S) if obj.name == "FemtoSat" else 1
-    # rho = get_atm_params(v=vrs, h=obj.r_orf[i][2] + vrs.HEIGHT)[0]
 
     if 'hkw' in vrs.SOLVER:
         v_real = v + vec_type([vrs.V_ORB, 0, 0])
@@ -112,7 +111,7 @@ def get_full_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, w=None, 
             force += get_aero_drag_acceleration(vrs=vrs, r=r, v=v, obj=obj, i=i, rho=rho)
         return force
 
-def translate_rhs(vrs: Variables, obj: Apparatus, i: int, rv, w=None, mu=None, rho=None, **kwargs):
+def translate_rhs(vrs: Variables, obj: Apparatus, i: int, rv, w=None, mu=None, rho=None):
     """При численном моделировании rv передаётся 1 numpy.ndarray, иначе rv типа tuple"""
     r, v = rv if isinstance(rv, tuple) else (rv[[0, 1, 2]], rv[[3, 4, 5]])
     dr = v
@@ -139,24 +138,20 @@ def get_torque(v: Variables, obj: Apparatus, q, w, t, i):
     """Вектор внешнего углового ускорения"""
     q = obj.q if q is None else q
     w = obj.w_irf if w is None else w
-    U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
     m_grav = np.zeros(3)
-    # J = obj.J
-    J = A.T @ obj.J @ A
+
+    # U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
+    # J = A.T @ obj.J @ A
+    J = obj.J
+
     return inv(J) @ (m_grav - cross(w, J @ w))
 
 def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):
     """При численном моделировании qw передаётся 1 numpy.ndarray;
     При символьном вычислении qw должен быть типа tuple"""
     q, w = qw if isinstance(qw, tuple) else (np.quaternion(*qw[[0, 1, 2, 3]]), qw[[4, 5, 6]])
-
-    # U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
-
-    e = get_torque(v=v, obj=obj, q=q, w=w, t=t, i=i)
     dq = 1 / 2 * q_dot(q, quat(w))
-    # J = A.T @ obj.J @ A
-    J = obj.J
-    dw = - (inv(J) @ (my_cross(w, J @ w))) + e
+    dw = get_torque(v=v, obj=obj, q=q, w=w, t=t, i=i)
 
     return (dq, dw) if isinstance(qw, tuple) else np.append(dq.components, dw)
 
@@ -259,7 +254,7 @@ class PhysicModel:
         self.a = a
         self.spacecrafts_cd = [self.c, self.f]
         self.spacecrafts_all = [self.a, self.c, self.f]
-        self.time_to_navigate_remain = 0.  # Костыль
+        self.time2nav = 0.
 
         # Инициализация фильтра
         self.k = KalmanFilter(f=f, c=c, p=self)
@@ -271,7 +266,6 @@ class PhysicModel:
 
         # Запись параметров
         self.record = DataFrame()
-        # self.do_report()  # Продублировать в конце time_step()
 
     def kiam_init(self):
         from kiam_astro import kiam
@@ -303,7 +297,7 @@ class PhysicModel:
     # Шаг по времени
     def time_step(self):
         self.iter += 1
-        self.t = self.iter * self.v.dT
+        self.t += self.v.dT
 
         # Движение системы
         for j, obj in enumerate(self.spacecrafts_all):
@@ -334,25 +328,22 @@ class PhysicModel:
                     obj.r_orf[i] = i_o(v=self.v, a=obj.r_irf[i], U=U, vec_type='r')
                     obj.v_orf[i] = i_o(v=self.v, a=obj.v_irf[i], U=U, vec_type='v')
                 else:
-                    raise ValueError(f"Поменяй солвер! SOLVER={self.v.SOLVER}, а должен быть среди {self.v.SOLVERS}!")
+                    raise ValueError(f"Solver is to be changed! {self.v.SOLVER} not in {self.v.SOLVERS}")
 
                 obj.w_orf[i] = i_o(v=self.v, a=obj.w_irf[i], U=U, vec_type='w')
 
         # Комплекс первичной информации
-        measure_antennas_power(c=self.c, f=self.f, v=self.v, noise=np.sqrt(self.v.KALMAN_COEF['r']), produce=True,
-                               p=self, estimated_params=[])
-        measure_magnetic_field(c=self.c, f=self.f, v=self.v, noise=np.sqrt(self.v.KALMAN_COEF['r']))
+        noise = np.sqrt(self.v.KALMAN_COEF['r'])
+        measure_antennas_power(c=self.c, f=self.f, v=self.v, noise=noise, produce=True, p=self, estimated_params=[])
+        measure_magnetic_field(c=self.c, f=self.f, v=self.v, noise=noise)
 
         # Изменение режимов работы
         guidance(v=self.v, c=self.c, f=self.f, earth_turn=self.t * self.v.W_ORB / 2 / np.pi)
 
         # Навигация чипсатов
         if self.v.IF_NAVIGATION:
-            navigate(k=self.k, if_correction=self.time_to_navigate_remain <= 0.)
-            if self.time_to_navigate_remain <= 0:
-                self.time_to_navigate_remain = self.v.dT_nav - self.v.dT
-            else:
-                self.time_to_navigate_remain -= self.v.dT
+            navigate(k=self.k, if_correction=self.time2nav <= 0.)
+            self.time2nav = self.v.dT_nav - self.v.dT if self.time2nav <= 0 else self.time2nav - self.v.dT
 
         # Запись параметров
         self.do_report()
@@ -411,5 +402,3 @@ class PhysicModel:
                             d.loc[i_t, f'{obj.name} RealQuat {c} {i_n}'] = q_irf[i_r]
                             d.loc[i_t, f'{obj.name} KalmanQuatEstimation {c} {i_n}'] = q_irf_estimation[i_r]
                             d.loc[i_t, f'{obj.name} KalmanQuatError {c} {i_n}'] = q_irf_estimation[i_r] - q_irf[i_r]
-
-        # d = d.astype({'i': 'int32', 'FemtoSat n': 'int32', 'CubeSat n': 'int32'})

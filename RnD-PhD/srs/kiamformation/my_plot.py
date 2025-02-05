@@ -17,7 +17,7 @@ rcParams["savefig.format"] = "jpg"
 # >>>>>>>>>>>> 2D графики <<<<<<<<<<<<
 def plot_distance(o):
     global TITLE_SIZE, CAPTION_SIZE
-    fig, ax = plt.subplots(2 if o.v.NAVIGATION_ANGLES else 2,  # 3 if o.v. ...
+    fig, ax = plt.subplots(2 if o.v.NAVIGATION_ANGLES else 2,
                            2 if o.v.NAVIGATION_ANGLES else 1, figsize=(20 if o.v.NAVIGATION_ANGLES else 8, 10))
     axes = ax[0] if o.v.NAVIGATION_ANGLES else ax
     title = {"рус": f"Неточности в навигации", "eng": f"Navigation Errors"}[o.v.LANGUAGE]
@@ -26,11 +26,9 @@ def plot_distance(o):
 
     m = 0
     x = o.p.record['t'].to_list()
-
     for i_c in range(o.c.n):
         for i_f in range(o.f.n):
-            labels = {"рус": ["Ошибка дистанции, оцениваемая на борту",
-                              "Ошибка определения положения Δr"],
+            labels = {"рус": ["Ошибка дистанции, оцениваемая на борту", "Ошибка определения положения Δr"],
                       "eng": ["Predicted measurement error difference Δᵖʳᵉᵈⁱᶜᵗ",
                               "Error of estimated position Δr"]}[o.v.LANGUAGE] \
                 if i_f == 0 else [None for _ in range(100)]
@@ -61,30 +59,18 @@ def plot_distance(o):
 
     if o.v.NAVIGATION_ANGLES:
         for i_f in range(o.f.n):
-            labels_q = ["λˣ", "λʸ", "λᶻ"]
-            labels_w = ["ωˣ", "ωʸ", "ωᶻ"]
             labels_dq = ["Δλˣ", "Δλʸ", "Δλᶻ"]
             labels_dw = ["Δωˣ", "Δωʸ", "Δωᶻ"]
             for j, c in enumerate('xyz'):
                 y1 = o.p.record[f'{o.f.name} KalmanQuatError {c} {i_f}'].to_list()
                 y2 = o.p.record[f'{o.f.name} KalmanSpinError ORF {c} {i_f}'].to_list()
-                y3 = o.p.record[f'{o.f.name} RealQuat {c} {i_f}'].to_list()
-                y3e = o.p.record[f'{o.f.name} KalmanQuatEstimation {c} {i_f}'].to_list()
-                y4 = o.p.record[f'{o.f.name} RealSpin ORF {c} {i_f}'].to_list()
-                y4e = o.p.record[f'{o.f.name} KalmanSpinEstimation ORF {c} {i_f}'].to_list()
                 ax[1][0].plot(x, y1, c=o.v.MY_COLORS[j+3], label=labels_dq[j] if i_f == 0 else None)
                 ax[1][1].plot(x, y2, c=o.v.MY_COLORS[j+3], label=labels_dw[j] if i_f == 0 else None)
-                # ax[2][0].plot(x, y3, c=o.v.MY_COLORS[j+3], label=labels_q[j] if i_f == 0 else None)
-                # ax[2][0].plot(x, y3e, ":", c=o.v.MY_COLORS[j+3])
-                # ax[2][1].plot(x, y4, c=o.v.MY_COLORS[j+3], label=labels_w[j] if i_f == 0 else None)
-                # ax[2][1].plot(x, y4e, ":", c=o.v.MY_COLORS[j+3])
-        for ii in [1]:  # , 2
-            ax[ii][0].set_ylabel({"рус": ["Ошибки λ", "Компоненты λ"][ii-1],
-                                  "eng": ["Quaternion components errors",
-                                          "λ components"][ii-1]}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
-            ax[ii][1].set_ylabel({"рус": ["Ошибки ω (ORF)", "Компоненты ω (ORF)"][ii-1],
-                                  "eng": ["Angular velocity errors, rad/s²",
-                                          "ω components"][ii-1]}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
+        for ii in [1]:
+            ax[ii][0].set_ylabel({"рус": "Ошибки λ",
+                                  "eng": "Quaternion components errors"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
+            ax[ii][1].set_ylabel({"рус": "Ошибки ω (ORF)",
+                                  "eng": "Angular velocity errors, rad/s²"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
             for j in range(2):
                 ax[ii][j].legend(fontsize=CAPTION_SIZE)
                 ax[ii][j].set_xlabel(label_time, fontsize=CAPTION_SIZE)
@@ -116,8 +102,7 @@ def plot_atmosphere_models(n: int = 100):
 
 # >>>>>>>>>>>> 3D отображение в ОСК <<<<<<<<<<<<
 def show_chipsat(o, j, clr, opacity, reference_frame: str, return_go: bool = True, ax=None, xyz=None) -> list:
-    """
-    Функция отображения чипсата (просто пластина)
+    """Функция отображения дочернего КА (квадратная пластина)
     :param o: Objects
     :param j: номер чипсата
     :param clr:
@@ -125,6 +110,7 @@ def show_chipsat(o, j, clr, opacity, reference_frame: str, return_go: bool = Tru
     :param reference_frame:
     :param return_go: По умолчанию, при return_go=False считается, что reference_frame="BRF"
     :param ax:
+    :param xyz: Размеры КА
     :return:
     """
     from dynamics import get_matrices
@@ -164,7 +150,7 @@ def show_cubesat(o, j, reference_frame: str, xyz=None) -> list:
     global CUBE_RATE
     total_cubes = 30
     r = [[[] for _ in range(total_cubes)] for _ in range(3)]
-    # r[x/y/z][0..5 - yellow, 6..29 - gray][1..4 - sides of square]
+    # Памятка: r[x/y/z][0..5 - yellow, 6..29 - gray][1..4 - sides of square]
     sequence = [[0, 0], [0, 1], [1, 0], [1, 1]]
     for i in range(3):
         for k in range(2):
@@ -178,11 +164,8 @@ def show_cubesat(o, j, reference_frame: str, xyz=None) -> list:
                    [((-1)**sequence[s][1] * o.c.size[1] - legs[1]) * CUBE_RATE,
                     ((-1)**sequence[s][1] * o.c.size[1] + legs[1]) * CUBE_RATE],
                    [(-o.c.size[2] - legs[2]) * CUBE_RATE, (o.c.size[2] + legs[2]) * CUBE_RATE]] for s in range(n_legs)]
-    # bound_cube = [[-o.c.size[0], o.c.size[1]], [-o.c.size[1], o.c.size[1]], [-o.c.size[2], o.c.size[2]]]
 
     for s in range(n_legs):
-        # ind1 = 0 + int(s // 2 < 1)
-        # ind2 = 1 + int(s // 2 < 2)
         r[0][(s + 1) * 6 + 0] = [bound_legs[s][0][0], bound_legs[s][0][0], bound_legs[s][0][0], bound_legs[s][0][0]]
         r[1][(s + 1) * 6 + 0] = [bound_legs[s][1][0], bound_legs[s][1][1], bound_legs[s][1][1], bound_legs[s][1][0]]
         r[2][(s + 1) * 6 + 0] = [bound_legs[s][2][0], bound_legs[s][2][0], bound_legs[s][2][1], bound_legs[s][2][1]]
@@ -217,10 +200,9 @@ def show_cubesat(o, j, reference_frame: str, xyz=None) -> list:
                 r[ind2][tmp] += [shift[ind2][sequence[m][1]]]
 
     U, S, A, _ = get_matrices(v=o.v, t=o.p.t, obj=o.c, n=j)
-    # A = quart2dcm(o.c.q[j])
     for k in range(total_cubes):
         for i in range(4):
-            r1 = S.T @ np.array([r[0][k][i], r[1][k][i], r[2][k][i]])  # При IRF нет поворота. А и хрен с ним
+            r1 = S.T @ np.array([r[0][k][i], r[1][k][i], r[2][k][i]])
             if reference_frame == 'ORF' and xyz is not None:
                 r1[0] *= xyz[0]
                 r1[1] *= xyz[1]
@@ -419,7 +401,7 @@ def animate_reference_frames(resolution: int = 3, n: int = 5):
     for i in range(n):
         remove(f"../../res/to_delete_{'{:04}'.format(i)}.png")
 
-# >>>>>>>>>>>> Конечная ассамблея <<<<<<<<<<<<
+# >>>>>>>>>>>> Функции отображения, готовые к использованию <<<<<<<<<<<<
 def show_chipsats_and_cubesats(o, reference_frame: str, clr: str = 'lightpink', opacity: float = 1):
     xyz_max = [-1e4] * 3
     xyz_min = [1e4] * 3
@@ -435,7 +417,6 @@ def show_chipsats_and_cubesats(o, reference_frame: str, clr: str = 'lightpink', 
             xyz_max[j] = max(xyz_max[j], max(l))
             xyz_min[j] = min(xyz_min[j], min(l))
         xyz[j] = xyz_max[j] - xyz_min[j]
-    # xyz /= np.max(xyz)
     data = []
     for i in range(o.f.n):
         data += show_chipsat(o, i, clr, opacity, reference_frame, xyz=xyz)

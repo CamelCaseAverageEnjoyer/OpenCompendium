@@ -16,9 +16,9 @@ class Variables:
         p = " ".join([str(i) for i in self.KALMAN_COEF['p']])
         rvw_cubesat = " ".join([str(i) for i in self.RVW_CubeSat_SPREAD])
         rvw_chipsat = " ".join([str(i) for i in self.RVW_ChipSat_SPREAD])
-        return [self.DESCRIPTION, self.dT, self.dT_nav, self.TIME, self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT,
-                self.DYNAMIC_MODEL['aero drag'], self.DYNAMIC_MODEL['j2'],
-                self.NAVIGATION_BY_ALL, self.NAVIGATION_ANGLES, self.MULTI_ANTENNA_TAKE, self.MULTI_ANTENNA_SEND,
+        return [self.DESCRIPTION, self.dT, self.dT_nav, self.TIME, self.DISTORTION,
+                self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT, self.DYNAMIC_MODEL['aero drag'], self.DYNAMIC_MODEL['j2'],
+                self.NAVIGATION_ANGLES, self.MULTI_ANTENNA_TAKE, self.MULTI_ANTENNA_SEND,
                 self.START_NAVIGATION_N, self.GAIN_MODEL_C_N, self.GAIN_MODEL_F_N, self.IF_NAVIGATION,
                 self.CUBESAT_MODEL_N, self.CHIPSAT_MODEL_N, q, p, self.KALMAN_COEF['r'], rvw_cubesat, rvw_chipsat,
                 self.DEPLOYMENT_N]
@@ -26,8 +26,8 @@ class Variables:
     def set_saving_params(self, params):
         """Функция принимает набор параметров из файла
         Должно быть согласовано с: self.get_saving_params(), config_choose.csv"""
-        self.DESCRIPTION, self.dT, self.dT_nav, self.TIME, self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT, aero, j2, \
-            self.NAVIGATION_BY_ALL, self.NAVIGATION_ANGLES, self.MULTI_ANTENNA_TAKE, self.MULTI_ANTENNA_SEND, \
+        self.DESCRIPTION, self.dT, self.dT_nav, self.TIME, self.DISTORTION, self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT, \
+            aero, j2, self.NAVIGATION_ANGLES, self.MULTI_ANTENNA_TAKE, self.MULTI_ANTENNA_SEND, \
             self.START_NAVIGATION_N, self.GAIN_MODEL_C_N, self.GAIN_MODEL_F_N, self.IF_NAVIGATION, \
             self.CUBESAT_MODEL_N, self.CHIPSAT_MODEL_N, q, p, r, rvw_cubesat, rvw_chipsat, self.DEPLOYMENT_N = params
         self.DYNAMIC_MODEL['aero drag'] = aero
@@ -58,7 +58,7 @@ class Variables:
         self.config_choose = self.config_choose.reset_index(drop=True)
         if add_now_params:  # Нужно для специфики self.remove_params()
             self.config_choose.loc[len(self.config_choose), :] = self.get_saving_params()
-        self.config_choose = self.config_choose.astype(get_types_dict())  # Костыль на типы данных
+        self.config_choose = self.config_choose.astype(get_types_dict())  # Установление типов данных
         self.config_choose.to_csv(self.path_config_data, sep=";")
         with open(self.path_config_data, 'r') as f:  # Костыль на то, чтобы убрать ";"
             s = f.read()
@@ -75,7 +75,6 @@ class Variables:
         self.save_params(add_now_params=False)
 
     def __init__(self):
-        # from kiam_astro import kiam
         from spacecrafts import Anchor
         from my_math import deg2rad
 
@@ -91,7 +90,6 @@ class Variables:
         self.CHIPSAT_AMOUNT = 1
         self.DYNAMIC_MODEL = {'aero drag': False,
                               'j2': False}
-        self.NAVIGATION_BY_ALL = True  # УДАЛИТЬ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.NAVIGATION_ANGLES = False  # Содержит ли искомый вектор состояния кватернионы и угловые скорости
         self.MULTI_ANTENNA_TAKE = False  # Разделяет ли КА приходящий сигнал на составляющие
         self.MULTI_ANTENNA_SEND = False  # Разделяет ли КА исходящий сигнал на составляющие
@@ -114,19 +112,19 @@ class Variables:
         self.START_NAVIGATION_N = 1
         self.GAIN_MODEL_C_N = 0
         self.GAIN_MODEL_F_N = 0
-        self.SOLVER_N = 0  # Везде проверяется на hkw -> проверки на rk4. Может изменить?
+        self.SOLVER_N = 0
         self.CUBESAT_MODEL_N = 0
         self.CHIPSAT_MODEL_N = 0
-        self.ATMOSPHERE_MODEL_N = 0  # Стояло 3 (20 сен)
+        self.ATMOSPHERE_MODEL_N = 0
         self.DEPLOYMENT_N = 0
 
         self.dTs = ["0.1", "1.0", "10.0", "30.0", "100.0"]
-        self.Ts = ["100.0", "1000.0", "10000.0", "100000.0"]
+        self.Ts = ["100.0", "1000.0", "5000.0", "10000.0", "100000.0"]
         self.CUBESAT_MODELS = ['1U', '1.5U', '2U', '3U', '6U', '12U']
         self.CHIPSAT_MODELS = ['KickSat', 'Трисат']
         self.DEPLOYMENTS = ['No', 'Special']
-        self.GAIN_MODES = ['isotropic', '1 antenna', '2 antennas', '3 antennas', 'ellipsoid']
-        self.N_ANTENNAS = {'isotropic': 1, '1 antenna': 1, '2 antennas': 2, '3 antennas': 3, 'ellipsoid': 1}
+        self.GAIN_MODES = ['isotropic', '1 antenna', '2 antennas', '3 antennas']
+        self.N_ANTENNAS = {'isotropic': 1, '1 antenna': 1, '2 antennas': 2, '3 antennas': 3}
         self.NAVIGATIONS = ['perfect', 'near', 'random']
         self.SOLVERS = ['rk4 hkw', 'kiamastro']
         self.OPERATING_MODES = ['free_flying', 'swarm_stabilize', 'lost']  # Пока что нигде не используется
@@ -214,10 +212,8 @@ class Variables:
 class Objects:
     def __init__(self, v: Variables):
         """Класс объединяет следующие другие классы: CubeSat, FemtoSat, PhysicModel"""
-
         # Классы
-        self.v = v
-        self.a, self.c, self.f, self.p = None, None, None, None
+        self.v, self.a, self.c, self.f, self.p = v, None, None, None, None
         self.init_classes()
 
     def reset(self, config_choose_n):
@@ -233,8 +229,7 @@ class Objects:
         self.p = PhysicModel(c=self.c, f=self.f, a=self.a, v=self.v)
 
     def time_message(self, t):
-        return f"Оборотов вокруг Земли: {round(t / (2 * np.pi / self.v.W_ORB), 2)}    " \
-               f"({round(t / (3600 * 24), 2)} дней)"
+        return f"Оборотов вокруг Земли: {round(t / (2 * np.pi / self.v.W_ORB), 2)}  ({round(t / (3600 * 24), 2)} дней)"
 
     def integrate(self, t: float, animate: bool = False) -> None:
         from cosmetic import real_workload_time, my_print
@@ -254,9 +249,7 @@ class Objects:
                 my_print(f"Диаграмма антенн кубсата: {self.c.gain_mode}\n"
                          f"Диаграмма антенн фемтосатов: {self.f.gain_mode}\n"
                          f"Учёт аэродинамики: {self.v.DYNAMIC_MODEL['aero drag']}\n"
-                         f"Применяется фильтр Калмана для поправки: положений, скоростей{tmp}\n"
-                         f"Фильтр Калмана основан на: "
-                         f"{'всех чипсатах' if self.v.NAVIGATION_BY_ALL else 'одном чипсате'}", color='c')
+                         f"Применяется фильтр Калмана для поправки: положений, скоростей{tmp}\n", color='c')
                 my_print(f"Вариант отделения дочерних КА: {self.v.DEPLOYMENT}", color='m')
                 my_print(f"Внимание: IF_NAVIGATION={self.v.IF_NAVIGATION}! ", color='m',
                          if_print=not self.v.IF_NAVIGATION)
@@ -276,15 +269,5 @@ class Objects:
             # Шаг по времени
             self.p.time_step()
 
-        # Заполнение None в p.record
-        fill_null_record(p=self.p)
-
 def init():
     return Objects(v=Variables())
-
-def fill_null_record(p: any):
-    pass
-    # for obj in [p.f]:
-    #     for i_n in range(obj.n):
-    #         p.record.loc[f'{obj.name} KalmanPosEstimation r {i_n}'] = \
-    #             p.record.loc[f'{obj.name} KalmanPosEstimation r {i_n}'].fillna(value=p.v.NO_LINE_FLAG)

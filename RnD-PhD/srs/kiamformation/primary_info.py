@@ -16,7 +16,6 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
     :param p: Класс PhysicModel (для флага produce)
     :param t: Время (для символьного вычисления)
     :return: None если produce==True (проведение численного моделирования), иначе список измерений + пометки"""
-    # norm, sqrt, mean, vec_type = kwargs['norm'], kwargs['sqrt'], kwargs['mean'], kwargs['vec_type']
     randy = np.random.uniform(-1, 1, 3)
     anw, notes = [], []
     S_1, S_2, dr, distance = None, None, None, None
@@ -94,7 +93,6 @@ def measure_magnetic_field(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
     for obj in [c, f]:
         for i in range(obj.n):
             obj.b_env[i] = np.zeros(3) + np.random.normal(0, noise, 3)
-    # v.MEASURES_VECTOR += ....????
 
 def measure_gps(f: FemtoSat, noise: float) -> None:
     """Функция обновляет для объектов FemtoSat параметры _не_введено_"""

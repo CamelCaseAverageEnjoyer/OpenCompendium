@@ -5,30 +5,26 @@
 import numpy as np
 from symbolic import *
 
-def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
-    '''Возвращает элемент матрицы Н в L_z^(c/d) строк и 6/13 столбцов.
-    Столбец элемента матрицы H определяет только i_x. Остальные параметры определяют строку.
-    :param i_x: Номер чипсата, у которого оценивается вектор-состояние (N вширь всей матрицы H)
-    :param i_y: Номер чипсата/кубсата, от которого идёт сигнал (M / N(N-1) ввысь половины матрицы H)
-    :param i_n: Номер чипсата, к которому идёт сигнал N ввысь элемента матрицы H^cf/H^ff)
+def h_element(i, j, gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
+    '''
     :param i: Номер 1-го КА
     :param j: Номер 2-го КА
-    :param fn: Количество чипсатов
-    :param cn: Количество кубсатов
+    :param fn: Количество дочерних КА
+    :param cn: Количество материнских КА
     :param i_all: Количество антенн у 1-го КА
     :param j_all: Количество антенн у 2-го КА
-    :param relation: Блок кубат-чипсат (cf) или чипсат-чипсат (ff) 
+    :param relation: Измерения материнский-дочерний КА (cd) или дочерний-дочерний КА (dd) 
     :param angles_navigation: Оценивается ли вращательное движение
     :param r1: Положение 1-го КА
     :param r2: Положение 2-го КА
-    :param r_f: Положения чипсатов
-    :param q_f: Вектор-часть кватернионов ориентации чипсатов
+    :param r_f: Положения дочерних КА
+    :param q_f: Вектор-часть кватернионов ориентации дочерних КА
     :param multy_antenna_send: Раскладывается ли сигнал при отправке
     :param multy_antenna_take: Раскладывается ли сигнал при принятии
-    :param w_0: Угловая скорость вращения ОСК
+    :param w_0: Угловая скорость вращения ОСК относительно ИСК
     :param t: Текущее время
-    :param q1: Кватернион 1-го КА (опционально)
-    :param q2: Кватернион 2-го КА (опционально)
+    :param q1: Вектор-часть кватерниона 1-го КА (при angles_navigation=True)
+    :param q2: Вектор-часть кватерниона 2-го КА (при angles_navigation=True)
     '''
     from symbolic import pi
 
