@@ -13,10 +13,10 @@ def local_dipole(v: Variables, r, ind: str = 'x', model='quarter-wave monopole')
     if ind not in ['x', 'y', 'z']:
         raise ValueError(f"Координата «{ind}» должна быть среди: [x, y, z]")
     r_12 = r / norm(r)
-    r_12 += np.array([0.03, 0.05, 0]) * v.DISTORTION  # Вручную задаваемое искажение диаграммы направленности
-    r_antenna_brf = vec_type([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')], b=r[0]) * 1.
+    r_12 += vec_type([0.03, 0.05, 0], b=r[0]) * v.DISTORTION  # Вручную задаваемое искажение диаграммы направленности
+    r_antenna_brf = vec_type([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')], b=r[0])
     
-    sin_theta = norm(my_cross(r_antenna_brf, r_12))
+    sin_theta = norm(cross(r_antenna_brf, r_12))
     cos_theta = dot(r_antenna_brf, r_12)
     if model == 'half-wave dipole':
         return cos(pi(r) / 2 * cos_theta) / sin_theta
@@ -74,6 +74,7 @@ class Apparatus:
         # Индивидуальные параметры движения
         self.w_irf = [np.zeros(3) for _ in range(self.n)]
         self.w_orf = [np.zeros(3) for _ in range(self.n)]
+        self.w_brf = [np.zeros(3) for _ in range(self.n)]
         self.q = [np.quaternion(1, 0, 0, 0) for _ in range(self.n)]
         self.r_orf = [np.zeros(3) for _ in range(self.n)]
         self.v_orf = [np.zeros(3) for _ in range(self.n)]
@@ -99,13 +100,15 @@ class Apparatus:
             self.r_irf[i] = o_i(v=v, a=self.r_orf[i], U=U, vec_type='r')
             self.v_irf[i] = o_i(v=v, a=self.v_orf[i], U=U, vec_type='v')
 
-    def update_irf_w(self, v: Variables, t: float = 0, w_irf: list = None, w_orf: list = None):
+    def update_irf_w(self, v: Variables, t: float = 0, w_irf: list = None, w_orf: list = None, w_brf: list = None):
         from dynamics import o_i, get_matrices
         w_irf = self.w_irf if w_irf is None else w_irf
         w_orf = self.w_orf if w_orf is None else w_orf
+        w_brf = self.w_brf if w_brf is None else w_brf
         for i in range(self.n):
-            U, _, _, _ = get_matrices(v=v, t=t, obj=self, n=i)
+            U, _, A, _ = get_matrices(v=v, t=t, obj=self, n=i)
             w_irf[i] = o_i(a=w_orf[i], v=v, U=U, vec_type='w')
+            w_brf[i] = A @ w_irf[i]
 
     def init_correct_q_v(self, v: Variables, q: list = None):
         q = self.q if q is None else q
@@ -170,7 +173,7 @@ class CubeSat(Apparatus):
         # Инициализируется автоматически
         self.q = [np.quaternion(1, 0, 0, 0) for _ in range(self.n)]
         self.init_correct_q_v(v=v)
-        self.r_irf, self.v_irf, self.w_irf = [[np.zeros(3) for _ in range(self.n)] for _ in range(3)]
+        self.r_irf, self.v_irf, self.w_irf, self.w_irf = [[np.zeros(3) for _ in range(self.n)] for _ in range(4)]
         self.update_irf_rv(v=v, t=0)
         self.update_irf_w(v=v, t=0)
         self.update_c(v=v)
@@ -214,13 +217,14 @@ class FemtoSat(Apparatus):
         self.deploy(v=v, c=c, i_c=0)
         self.w_orf_ = [v.spread('w', name=self.name) for _ in range(self.n)]
         # Инициализируется автоматически
-        self.r_irf, self.v_irf, self.w_irf, self.w_irf_ = [[np.zeros(3) for _ in range(self.n)] for _ in range(4)]
+        self.r_irf, self.v_irf, self.w_irf, self.w_irf_, self.w_brf, self.w_brf_ = \
+            [[np.zeros(3) for _ in range(self.n)] for _ in range(6)]
         self.q, self.q_ = [[np.quaternion(*np.random.uniform(-1, 1, 4)) for _ in range(self.n)] for _ in range(2)]
         self.init_correct_q_v(v=v)
         self.init_correct_q_v(v=v, q=self.q_)
         self.update_irf_rv(v=v, t=0)
         self.update_irf_w(v=v, t=0)
-        self.update_irf_w(v=v, t=0, w_irf=self.w_irf_, w_orf=self.w_orf_)
+        self.update_irf_w(v=v, t=0, w_irf=self.w_irf_, w_orf=self.w_orf_, w_brf=self.w_brf_)
         self.update_c(v=v)
 
         # Индивидуальные параметры управления
@@ -234,7 +238,7 @@ class FemtoSat(Apparatus):
                                          for i in range(self.n)],
                                'v orf': [self.v_orf[i] * tol + v.spread('v', name=self.name) * (1 - tol)
                                          for i in range(self.n)],
-                               'w irf': [self.w_irf[i] * tol + self.w_irf_[i] * (1 - tol) for i in range(self.n)],
+                               'w brf': [self.w_brf[i] * tol + self.w_brf_[i] * (1 - tol) for i in range(self.n)],
                                'q-3 irf': [self.q[i].vec * tol + self.q_[i].vec * (1 - tol) for i in range(self.n)]}
 
     def deploy(self, v: Variables, c: CubeSat, i_c: int) -> None:

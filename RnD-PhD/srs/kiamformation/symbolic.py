@@ -89,7 +89,7 @@ def quat(a):
     return np.quaternion(*a) if isinstance(a[0], int | float | np.ndarray) else sympy.Matrix([0, a[0], a[1], a[2]])
 
 def dot(a, b):
-    return a @ b if isinstance(a[0], int | float | np.ndarray) else (a.T @ b)[0]
+    return a @ b if isinstance(a[0], int | float | np.ndarray) else (a.T @ b)  # [0]
 
 def block_diag(*args):
     import scipy

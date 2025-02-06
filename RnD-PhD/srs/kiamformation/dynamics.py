@@ -139,20 +139,16 @@ def get_torque(v: Variables, obj: Apparatus, q, w, t, i):
     q = obj.q if q is None else q
     w = obj.w_irf if w is None else w
     m_grav = np.zeros(3)
-
     # U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
-    # J = A.T @ obj.J @ A
     J = obj.J
-
     return inv(J) @ (m_grav - cross(w, J @ w))
 
 def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):
     """При численном моделировании qw передаётся 1 numpy.ndarray;
     При символьном вычислении qw должен быть типа tuple"""
     q, w = qw if isinstance(qw, tuple) else (np.quaternion(*qw[[0, 1, 2, 3]]), qw[[4, 5, 6]])
-    dq = 1 / 2 * q_dot(q, quat(w))
+    dq = 1 / 2 * q_dot(quat(w), q)
     dw = get_torque(v=v, obj=obj, q=q, w=w, t=t, i=i)
-
     return (dq, dw) if isinstance(qw, tuple) else np.append(dq.components, dw)
 
 def rk4_attitude(v_: Variables, obj: Union[CubeSat, FemtoSat], t: float, i: int, dt: float = None, q=None, w=None):
@@ -160,7 +156,7 @@ def rk4_attitude(v_: Variables, obj: Union[CubeSat, FemtoSat], t: float, i: int,
     Если принял на вход q-3, возвращает q-3; аналогично q-4"""
     dt = v_.dT if dt is None else dt
     q = obj.q[i] if q is None else q
-    w = obj.w_irf[i] if w is None else w
+    w = obj.w_brf[i] if w is None else w
 
     q4 = q if isinstance(q, np.quaternion) else vec2quat(q)
 
@@ -302,9 +298,11 @@ class PhysicModel:
         # Движение системы
         for j, obj in enumerate(self.spacecrafts_all):
             for i in range(obj.n):
+                U, _, A, _ = get_matrices(v=self.v, t=self.t, obj=obj, n=i)
+
                 # Вращательное движение
-                if obj != self.a and self.v.GAIN_MODEL_C_N + self.v.GAIN_MODEL_F_N > 0:
-                    obj.q[i], obj.w_irf[i] = rk4_attitude(v_=self.v, obj=obj, i=i, t=self.t)
+                if obj != self.a:  # and self.v.GAIN_MODEL_C_N + self.v.GAIN_MODEL_F_N > 0:
+                    obj.q[i], obj.w_brf[i] = rk4_attitude(v_=self.v, obj=obj, i=i, t=self.t)
 
                 # Поступательное движение
                 if 'rk4' in self.v.SOLVER:
@@ -314,7 +312,6 @@ class PhysicModel:
                         obj.r_orf[i] = r_hkw(obj.c_hkw[i], self.v.W_ORB, self.t)
                         obj.v_orf[i] = v_hkw(obj.c_hkw[i], self.v.W_ORB, self.t)
 
-                    U, _, _, _ = get_matrices(v=self.v, t=self.t, obj=obj, n=i)
                     obj.r_irf[i] = o_i(v=self.v, a=obj.r_orf[i], U=U, vec_type='r')
                     obj.v_irf[i] = o_i(v=self.v, a=obj.v_orf[i], U=U, vec_type='v')
                 elif 'kiamastro' in self.v.SOLVER:
@@ -330,6 +327,8 @@ class PhysicModel:
                 else:
                     raise ValueError(f"Solver is to be changed! {self.v.SOLVER} not in {self.v.SOLVERS}")
 
+                U, _, A, _ = get_matrices(v=self.v, t=self.t, obj=obj, n=i)
+                obj.w_irf[i] = A.T @ obj.w_brf[i]
                 obj.w_orf[i] = i_o(v=self.v, a=obj.w_irf[i], U=U, vec_type='w')
 
         # Комплекс первичной информации
@@ -372,32 +371,34 @@ class PhysicModel:
             for i_n in range(obj.n):
                 if obj.operating_mode[i_n] != "lost":  # Иначе заполняется Null (в plot в self.v.NO_LINE_FLAG)
                     r_orf_estimation = self.k.get_estimation(i_f=i_n, v='r orf')
-                    w_irf_estimation = self.k.get_estimation(i_f=i_n, v='w irf')
+                    w_brf_estimation = self.k.get_estimation(i_f=i_n, v='w brf')
                     q_irf_estimation = self.k.get_estimation(i_f=i_n, v='q-3 irf')
                     r_orf = self.f.r_orf[i_n]
-                    w_irf = self.f.w_irf[i_n]
+                    w_brf = self.f.w_brf[i_n]
                     q_irf = self.f.q[i_n].vec
 
                     w_orf, w_orf_estimation = [], []  # Чтобы PyCharm не ругался
                     if self.v.NAVIGATION_ANGLES:
-                        U, _, _, _ = get_matrices(v=self.v, t=self.t, obj=obj, n=i_n)
+                        U, _, A, _ = get_matrices(v=self.v, t=self.t, obj=obj, n=i_n)
+                        w_irf = A.T @ w_brf
                         w_orf = i_o(a=w_irf, v=self.v, vec_type='w', U=U)
+                        w_irf_estimation = A.T @ w_brf_estimation
                         w_orf_estimation = i_o(a=w_irf_estimation, v=self.v, vec_type='w', U=U)
 
                     d.loc[i_t, f'{obj.name} KalmanPosEstimation r {i_n}'] = np.linalg.norm(r_orf_estimation)
                     d.loc[i_t, f'{obj.name} KalmanPosError r {i_n}'] = np.linalg.norm(r_orf_estimation - r_orf)
                     if self.v.NAVIGATION_ANGLES:
-                        d.loc[i_t, f'{obj.name} KalmanSpinError w {i_n}'] = np.linalg.norm(w_irf_estimation - w_irf)
+                        d.loc[i_t, f'{obj.name} KalmanSpinError w {i_n}'] = np.linalg.norm(w_brf_estimation - w_brf)
                         d.loc[i_t, f'{obj.name} KalmanQuatError q {i_n}'] = np.linalg.norm(q_irf_estimation - q_irf)
                     for i_r, c in enumerate('xyz'):
                         d.loc[i_t, f'{obj.name} KalmanPosEstimation {c} {i_n}'] = r_orf_estimation[i_r]
                         d.loc[i_t, f'{obj.name} KalmanPosError {c} {i_n}'] = r_orf_estimation[i_r] - r_orf[i_r]
                         if self.v.NAVIGATION_ANGLES:
-                            d.loc[i_t, f'{obj.name} RealSpin IRF {c} {i_n}'] = w_irf[i_r]
+                            d.loc[i_t, f'{obj.name} RealSpin BRF {c} {i_n}'] = w_brf[i_r]
                             d.loc[i_t, f'{obj.name} RealSpin ORF {c} {i_n}'] = w_orf[i_r]
-                            d.loc[i_t, f'{obj.name} KalmanSpinEstimation IRF {c} {i_n}'] = w_irf_estimation[i_r]
+                            d.loc[i_t, f'{obj.name} KalmanSpinEstimation BRF {c} {i_n}'] = w_brf_estimation[i_r]
                             d.loc[i_t, f'{obj.name} KalmanSpinEstimation ORF {c} {i_n}'] = w_orf_estimation[i_r]
-                            d.loc[i_t, f'{obj.name} KalmanSpinError IRF {c} {i_n}'] = w_irf_estimation[i_r] - w_irf[i_r]
+                            d.loc[i_t, f'{obj.name} KalmanSpinError BRF {c} {i_n}'] = w_brf_estimation[i_r] - w_brf[i_r]
                             d.loc[i_t, f'{obj.name} KalmanSpinError ORF {c} {i_n}'] = w_orf_estimation[i_r] - w_orf[i_r]
                             d.loc[i_t, f'{obj.name} RealQuat {c} {i_n}'] = q_irf[i_r]
                             d.loc[i_t, f'{obj.name} KalmanQuatEstimation {c} {i_n}'] = q_irf_estimation[i_r]
