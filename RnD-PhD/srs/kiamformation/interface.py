@@ -4,7 +4,7 @@ from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import QWidget, QGridLayout, QPushButton, QLabel, QApplication, QLineEdit, QCheckBox, \
     QComboBox, \
     QInputDialog, QFileDialog
-from simulation import save_simulation_trajectories, load_simulation_trajectories
+from simulation import save_simulation_trajectories, load_simulation_trajectories, find_close_solution
 from my_plot import *
 
 ICON_SIZE = 50
@@ -130,6 +130,9 @@ class Window(QWidget):
         y += 1
         self.name_type_func[y][n] = [self.path + "path.png", "button", self.local_solve_minimization, (1, 1)]
         self.name_type_func[y][n+1] = ["Навигация роя\nс помощью scipy", "label", None, (1, 1)]
+        y += 1
+        self.name_type_func[y][n] = [self.path + "wizard.png", "button", lambda x=self.o: find_close_solution(x), (1, 1)]
+        self.name_type_func[y][n+1] = ["Прикольные\nприколы", "label", None, (1, 1)]
         y += 1
         self.name_type_func[y][n] = [self.path + "antenna.png", "button", lambda x=self.o: plot_model_gain(x), (1, 1)]
         self.name_type_func[y][n+1] = ["Посмотреть диаграммы\nнаправленностей", "label", None, (1, 1)]

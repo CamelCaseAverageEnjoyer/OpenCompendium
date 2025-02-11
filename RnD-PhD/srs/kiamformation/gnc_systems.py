@@ -29,6 +29,8 @@ class KalmanFilter:
 
         self.estimation_params = self.params_dict2vec(d=f.apriori_params, separate_spacecraft=True)
         self.j = len(self.estimation_params[0])  # Вектор состояния 1 чипсата
+        self.STM = None
+        self.observability_gramian = None
 
         # Матрицы фильтра в начальный момент времени
         if not self.v.NAVIGATION_ANGLES:  # Вектор состояния содержит только положение и скорость
@@ -62,7 +64,7 @@ class KalmanFilter:
                              [0, 0, 3 * w0 ** 2, 2 * w0, 0, 0]]) * self.v.dT + np.eye(self.j)
         else:  # Оценка орбитального и углового движения
             Phi_w = inv(self.f.J) @ (-get_antisymmetric_matrix(w) @ self.f.J +
-                                     get_antisymmetric_matrix(self.f.J @ w)) * self.v.dT_nav
+                                     get_antisymmetric_matrix(self.f.J @ w))
             return np.array([[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
                              [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
                              [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
@@ -165,7 +167,7 @@ class KalmanFilter:
         for i in range(len(z_model)):
             p.record.loc[p.iter, f'ZModel&RealDifference {i}'] = np.abs(z_model - z_)[i]
 
-        if if_correction and False:
+        if if_correction:
             # >>>>>>>>>>>> Этап коррекции <<<<<<<<<<<<
             self.Phi = self.get_Phi(w=None, w0=None)
             Q_tilda = self.Phi @ self.D @ self.Q @ self.D.T @ self.Phi.T * v.dT
@@ -177,6 +179,15 @@ class KalmanFilter:
             k_ = P_m @ H.T @ np.linalg.inv(H @ P_m @ H.T + R)
             self.P = (np.eye(j * f.n) - k_ @ H) @ P_m
             raw_estimation_params = np.array(np.matrix(x_m) + k_ @ (z_ - z_model))[0]
+
+            # Численный расчёт STM (state transition matrix)
+            self.STM = self.Phi if self.STM is None else self.Phi @ self.STM
+
+            tmp = self.STM.T @ H.T @ H @ self.STM
+            self.observability_gramian = tmp if self.observability_gramian is None else self.observability_gramian + tmp
+            _, simgas, _ = np.linalg.svd(self.observability_gramian)
+            if self.p.iter % 10 == 0:
+                print(f"{self.p.iter}: min = {np.min(simgas)}, max/min={np.max(simgas)/np.min(simgas)} | {simgas}")
         else:
             raw_estimation_params = x_m
 

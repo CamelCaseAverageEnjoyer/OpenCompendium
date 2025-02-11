@@ -51,9 +51,6 @@ def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False,
         if (if_take and multy_take) or (if_send and multy_send):
             return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y'), local_dipole(v, r, 'z')]
         return [local_dipole(v, r, 'x') + local_dipole(v, r, 'y') + local_dipole(v, r, 'z')]
-    # if gm == v.GAIN_MODES[4]:
-    #     e = r / np.linalg.norm(r)
-    #     return [np.linalg.norm([e[0] * 1, e[1] * 0.7, e[2] * 0.8])]
     return [1]
 
 

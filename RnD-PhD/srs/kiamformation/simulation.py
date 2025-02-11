@@ -23,16 +23,40 @@ def load_simulation_trajectories(o: Objects, text: str):
     o.p.record = read_csv(text, sep=";")
     my_print(f"Из файла {text} прочитаны траектории", color='y')
 
-def find_mirror_solutions(o: Objects):
-    """
-    Пока что сделано только для изотропных антенн, без учёта ориентации
-    :param o:
-    :return:
-    """
-    from dynamics import get_rand_c
-    # c_0 = o.f.c_hkw
-    c_r = get_rand_c(v=o.v)
-    pass  # o.v.MEASURES_VECTOR
+def find_close_solution(o: Objects):
+    o.v.IF_NAVIGATION = False
+    o.v.IF_ANY_PRINT = False
+    qf = o.f.q
+    wf = o.f.w_brf
+    rf = o.f.r_orf
+    vf = o.f.v_orf
+    qc = o.c.q
+    wc = o.c.w_brf
+    rc = o.c.r_orf
+    vc = o.c.v_orf
+
+    measurements = []
+
+    for r_x in [-1, 1]:
+        for r_y in [-1, 1]:
+            for r_z in [-1, 1]:
+                for v_x in [-0.01, 0.10]:
+                    for v_y in [-0.01, 0.01]:
+                        for v_z in [-0.01, 0.01]:
+                            for i in range(o.f.n):
+                                o.init_classes()
+                                o.f.q[i] = qf[i]
+                                o.f.w_brf[i] = wf[i]
+                                o.f.r_orf[i] = rf[i] + np.array([r_x, r_y, r_z])
+                                o.f.v_orf[i] = vf[i] + np.array([v_x, v_y, v_z])
+                                o.integrate(t=o.v.TIME)
+                                # measurements.append(o.v.MEASURES_VECTOR)
+                                measurements.append(o.p.record[f'MEASURES_VECTOR {0}'])
+    for i in measurements:
+        plt.plot(i)
+    plt.show()
+
+
 
 def solve_minimization_new(o: Objects, config_choose_n: int):
     from scipy.optimize import minimize
