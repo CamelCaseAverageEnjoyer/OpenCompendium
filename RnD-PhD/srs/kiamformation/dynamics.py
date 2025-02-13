@@ -137,11 +137,11 @@ def rk4_translate(v_: Variables, obj: Union[CubeSat, FemtoSat], i: int, dt: floa
 def get_torque(v: Variables, obj: Apparatus, q, w, t, i):
     """Вектор внешнего углового ускорения"""
     q = obj.q if q is None else q
-    w = obj.w_irf if w is None else w
+    w = obj.w_brf if w is None else w
     m_grav = np.zeros(3)
     # U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
     J = obj.J
-    return inv(J) @ (m_grav - cross(w, J @ w))
+    return inv(J) @ ( - cross(w, J @ w))  # m_grav
 
 def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):
     """При численном моделировании qw передаётся 1 numpy.ndarray;
