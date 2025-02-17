@@ -63,8 +63,8 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
                             g_vec = [1] * (take_len if direction == "2->1" else send_len) * \
                                           (take_len if direction == "1->2" else send_len)
 
-                        estimates = [distance_measured / sqrt(gg) for gg in g_vec] if not produce else \
-                                    [(distance_measured + np.random.normal(0, noise)) / sqrt(gg) for gg in g_vec]
+                        estimates = [gg / distance_measured**2 for gg in g_vec] if not produce else \
+                                    [(gg / distance_measured**2) + np.random.normal(0, noise) for gg in g_vec]
                         est_dr = mean(estimates)
                         anw.extend(estimates)
 

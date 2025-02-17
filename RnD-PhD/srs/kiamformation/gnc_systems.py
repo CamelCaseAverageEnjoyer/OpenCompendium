@@ -1,4 +1,5 @@
 import numpy as np
+import control
 
 from spacecrafts import *
 from H_matrix import *
@@ -160,12 +161,13 @@ class KalmanFilter:
 
         # Измерения согласно модели
         z_model, notes3 = measure_antennas_power(c=c, f=f, v=v, p=p, j=j, estimated_params=x_m)
-        p.record.loc[p.iter, f'ZModel&RealDifference'] = np.abs(z_model - z_).mean()
-        p.record.loc[p.iter, f'ZModel&RealDifference min'] = np.abs(z_model - z_).min()
-        p.record.loc[p.iter, f'ZModel&RealDifference max'] = np.abs(z_model - z_).max()
+        tmp = np.abs(z_model - z_)
+        p.record.loc[p.iter, f'ZModel&RealDifference'] = tmp.mean()
+        p.record.loc[p.iter, f'ZModel&RealDifference min'] = tmp.min()
+        p.record.loc[p.iter, f'ZModel&RealDifference max'] = tmp.max()
         p.record.loc[p.iter, f'ZModel&RealDifference N'] = len(z_model)
         for i in range(len(z_model)):
-            p.record.loc[p.iter, f'ZModel&RealDifference {i}'] = np.abs(z_model - z_)[i]
+            p.record.loc[p.iter, f'ZModel&RealDifference {i}'] = tmp[i]
 
         if if_correction:
             # >>>>>>>>>>>> Этап коррекции <<<<<<<<<<<<
@@ -182,12 +184,15 @@ class KalmanFilter:
 
             # Численный расчёт STM (state transition matrix)
             self.STM = self.Phi if self.STM is None else self.Phi @ self.STM
-
             tmp = self.STM.T @ H.T @ H @ self.STM
             self.observability_gramian = tmp if self.observability_gramian is None else self.observability_gramian + tmp
             _, simgas, _ = np.linalg.svd(self.observability_gramian)
-            if self.p.iter % 10 == 0:
-                print(f"{self.p.iter}: min = {np.min(simgas)}, max/min={np.max(simgas)/np.min(simgas)} | {simgas}")
+            p.record.loc[p.iter, f'gramian sigma criteria'] = np.min(simgas)/np.max(simgas)
+
+            tmp = control.obsv((self.Phi - np.zeros(self.Phi.shape)) / self.v.dT_nav, H)
+            _, simgas, _ = np.linalg.svd(tmp)
+            p.record.loc[p.iter, f'linear rank criteria'] = np.linalg.matrix_rank(tmp)
+            p.record.loc[p.iter, f'linear sigma criteria'] = np.min(simgas)/np.max(simgas)
         else:
             raw_estimation_params = x_m
 

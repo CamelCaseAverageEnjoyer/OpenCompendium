@@ -15,8 +15,25 @@ rcParams["savefig.directory"] = "/home/kodiak/Desktop"
 rcParams["savefig.format"] = "jpg"
 
 # >>>>>>>>>>>> 2D графики <<<<<<<<<<<<
+def plot_observability_criteria(o):
+    global TITLE_SIZE, CAPTION_SIZE
+    x = o.p.record['t'].to_list()
+    label_time = {"рус": f"Время, с", "eng": f"Time, s"}[o.v.LANGUAGE]
+    labels = {"рус": ["", "", ""],
+              "eng": ["Gramian singular value rate", "Linear singular value rate", "Linear rank"]}[o.v.LANGUAGE]
+    fig, ax = plt.subplots(2, 1, figsize=(6, 8))
+    for i, s in enumerate(['gramian sigma criteria', 'linear sigma criteria', 'linear rank criteria']):
+        ax[i//2].plot(x, o.p.record[s].to_list(), label=labels[i])
+        ax[i//2].grid(True)
+        ax[i//2].set_xlabel(label_time, fontsize=CAPTION_SIZE)
+    ax[0].legend(fontsize=CAPTION_SIZE)
+    ax[1].legend(fontsize=CAPTION_SIZE)
+    plt.show()
+
+
 def plot_distance(o):
     global TITLE_SIZE, CAPTION_SIZE
+
     fig, ax = plt.subplots(2 if o.v.NAVIGATION_ANGLES else 2,
                            2 if o.v.NAVIGATION_ANGLES else 1, figsize=(20 if o.v.NAVIGATION_ANGLES else 8, 10))
     axes = ax[0] if o.v.NAVIGATION_ANGLES else ax
@@ -24,34 +41,29 @@ def plot_distance(o):
     label_time = {"рус": f"Время, с", "eng": f"Time, s"}[o.v.LANGUAGE]
     fig.suptitle(title, fontsize=TITLE_SIZE)
 
-    m = 0
     x = o.p.record['t'].to_list()
     for i_c in range(o.c.n):
         for i_f in range(o.f.n):
-            labels = {"рус": ["Ошибка дистанции, оцениваемая на борту", "Ошибка определения положения Δr"],
-                      "eng": ["Predicted measurement error difference Δᵖʳᵉᵈⁱᶜᵗ",
-                              "Error of estimated position Δr"]}[o.v.LANGUAGE] \
+            labels = {"рус": ["Разница измерений модельных и полученных", "Ошибка определения положения Δr"],
+                      "eng": ["Error or predicted measurement Δᵖʳᵉᵈⁱᶜᵗ"]}[o.v.LANGUAGE] \
                 if i_f == 0 else [None for _ in range(100)]
             max_y2 = 0.
             for jj in range(int(o.p.record[f'ZModel&RealDifference N'][1])):
                 y2 = o.p.record[f'ZModel&RealDifference {jj}'].to_list()
                 max_y2 = max(max_y2, max(y2))
                 axes[0].plot(x, y2, c=o.v.MY_COLORS[6], label=labels[0] if i_c == 0 and jj == 0 else None, lw=1)
-            y3 = o.p.record[f'{o.f.name} KalmanPosError r {i_f}'].to_list()
-            axes[0].plot(x, y3, c=o.v.MY_COLORS[2], label=labels[1] if i_c == 0 else None)
-            m = max(m, max_y2, max(y3))
     axes[0].set_xlabel(label_time, fontsize=CAPTION_SIZE)
-    axes[0].set_ylabel({"рус": f"Ошибка, м", "eng": f"Distance error, m"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
+    axes[0].set_ylabel({"рус": f"Ошибка, м", "eng": f"Error, m"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
     axes[0].legend(fontsize=CAPTION_SIZE)
     axes[0].grid(True)
-    if m > 1e3:
-        axes[0].set_ylim([0, 1e3])
 
     for i_f in range(o.f.n):
-        labels = ["ΔX", "ΔY", "ΔZ"]
+        labels = ["ΔX", "ΔY", "ΔZ", "Error of estimated position Δr"]
         for j, c in enumerate('xyz'):
             y = o.p.record[f'{o.f.name} KalmanPosError {c} {i_f}'].to_list()
             axes[1].plot(x, y, c=o.v.MY_COLORS[j+3], label=labels[j] if i_f == 0 else None)
+        y3 = o.p.record[f'{o.f.name} KalmanPosError r {i_f}'].to_list()
+        axes[1].plot(x, y3, c='k', label=labels[3] if i_f == 0 else None)
     axes[1].set_xlabel(label_time, fontsize=CAPTION_SIZE)
     axes[1].set_ylabel({"рус": f"Δr компоненты, м", "eng": f"Estimation error, m"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
     axes[1].legend(fontsize=CAPTION_SIZE)
@@ -76,6 +88,8 @@ def plot_distance(o):
                 ax[ii][j].set_xlabel(label_time, fontsize=CAPTION_SIZE)
                 ax[ii][j].grid(True)
     plt.show()
+
+    plot_observability_criteria(o)
 
 def plot_atmosphere_models(n: int = 100):
     from dynamics import get_atm_params
