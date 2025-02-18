@@ -1,21 +1,21 @@
 
 
 def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False):
-    '''Возвращает матрицу частных производных Н.
-    :param c_ant: Количество антенн у кубсата
-    :param f_ant: Количество антенн у чипсата
-    :param fn: Количество чипсатов
-    :param cn: Количество кубсатов
+    '''Возвращает матрицу отображения наблюдаемости H = dz/dx. Только измерения RSSI
+    :param c_ant: Количество антенн у материнского КА
+    :param f_ant: Количество антенн у дочернего КА
+    :param fn: Количество дочерних КА
+    :param cn: Количество материнских КА
     :param angles_navigation: Оценивается ли вращательное движение
-    :param r_f: Положения чипсатов
-    :param r_c: Положения кубсатов
+    :param r_f: Положения дочерних КА
+    :param r_c: Положения материнских КА
     :param multy_antenna_send: Раскладывается ли сигнал при отправке
     :param multy_antenna_take: Раскладывается ли сигнал при принятии
-    :param w_0: Угловая скорость вращения ОСК
+    :param w_0: Угловая скорость вращения ОСК относительно ИСК
     :param t: Текущее время
-    :param q_f: Вектор-часть кватернионов чипсатов (опционально)
-    :param q_c: Вектор-часть кватернионов кубсатов (опционально)
-    :return: Матрица частных производных H. Отображение состояния в измерения
+    :param q_f: Вектор-часть кватернионов дочерних КА (при angles_navigation=True)
+    :param q_c: Вектор-часть кватернионов материнских КА (при angles_navigation=True)
+    :return: Матрица частных производных H - линеаризация отображения состояния в измерения.
     ''' 
     from sympy import var, Matrix
     from spacecrafts import get_gain
@@ -41,7 +41,6 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
             if i_f1 != i_f2:
                 ff_sequence += [[i_f1, i_f2]]
 
-    # >>>>>>>>>>>> Верхняя подматрица <<<<<<<<<<<<
     H_cd = None
     for i_c in range(cn):
         row = []
@@ -49,7 +48,7 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
             if return_template:
                 row.append(Matrix([var('c_{' + str(i_c) + '}d_{' + str(i_f) + '}')]))
             else:
-                row.append(h_element(i=i_c, j=i_f, gm_1=c_g, gm_2=f_g, fn=fn, cn=cn, relation='cd', angles_navigation=angles_navigation, r_f=r_f, r1=r_c[i_c], r2=r_f[i_f], q_f=q_f, q1=q_c[i_c], q2=q_f[i_f], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
+                row.append(h_element(gm_1=c_g, gm_2=f_g, fn=fn, cn=cn, relation='cd', angles_navigation=angles_navigation, r_f=r_f, r1=r_c[i_c], r2=r_f[i_f], q_f=q_f, q1=q_c[i_c], q2=q_f[i_f], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
                 
         row = block_diag(*row)
         H_cd = row if H_cd is None else vstack(H_cd, row)
@@ -58,13 +57,13 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
     H_dd = None
     for i_y in range(len(ff_sequence)):  # то же самое, что range(int(fn*(fn-1)/2)):
         row = []
-        for i_x in range(fn):  # i_x, i_y - сетка как в статье
+        for i_x in range(fn):
             if i_x in ff_sequence[i_y]:
-                i_1, i_2 = ff_sequence[i_y] if i_x == ff_sequence[i_y][0] else ff_sequence[i_y][::-1]  # Я тут не перепутал????????
+                i_1, i_2 = ff_sequence[i_y] if i_x == ff_sequence[i_y][1] else ff_sequence[i_y][::-1]
                 if return_template:
                     row.append(Matrix([var('d_{' + str(i_1) + '}d_{' + str(i_2) + '}')]))
                 else:
-                    row.append(h_element(i=i_1, j=i_2, gm_1=f_g, gm_2=f_g, fn=fn, cn=cn, relation="dd", angles_navigation=angles_navigation, r_f=r_f, r1=r_f[i_1], r2=r_f[i_2], q_f=q_f, q1=q_f[i_1], q2=q_f[i_2], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
+                    row.append(h_element(gm_1=f_g, gm_2=f_g, fn=fn, cn=cn, relation="dd", angles_navigation=angles_navigation, r_f=r_f, r1=r_f[i_1], r2=r_f[i_2], q_f=q_f, q1=q_f[i_1], q2=q_f[i_2], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
             else:
                 if return_template:
                     row.append(Matrix([0]))

@@ -41,7 +41,6 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
             if i_f1 != i_f2:
                 ff_sequence += [[i_f1, i_f2]]
 
-    # >>>>>>>>>>>> Верхняя подматрица <<<<<<<<<<<<
     H_cd = None
     for i_c in range(cn):
         row = []
@@ -49,7 +48,7 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
             if return_template:
                 row.append(Matrix([var('c_{' + str(i_c) + '}d_{' + str(i_f) + '}')]))
             else:
-                row.append(h_element(i=i_c, j=i_f, gm_1=c_g, gm_2=f_g, fn=fn, cn=cn, relation='cd', angles_navigation=angles_navigation, r_f=r_f, r1=r_c[i_c], r2=r_f[i_f], q_f=q_f, q1=q_c[i_c], q2=q_f[i_f], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
+                row.append(h_element(gm_1=c_g, gm_2=f_g, fn=fn, cn=cn, relation='cd', angles_navigation=angles_navigation, r_f=r_f, r1=r_c[i_c], r2=r_f[i_f], q_f=q_f, q1=q_c[i_c], q2=q_f[i_f], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
                 
         row = block_diag(*row)
         H_cd = row if H_cd is None else vstack(H_cd, row)
@@ -60,11 +59,11 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
         row = []
         for i_x in range(fn):
             if i_x in ff_sequence[i_y]:
-                i_1, i_2 = ff_sequence[i_y] if i_x == ff_sequence[i_y][0] else ff_sequence[i_y][::-1]
+                i_1, i_2 = ff_sequence[i_y] if i_x == ff_sequence[i_y][1] else ff_sequence[i_y][::-1]
                 if return_template:
                     row.append(Matrix([var('d_{' + str(i_1) + '}d_{' + str(i_2) + '}')]))
                 else:
-                    row.append(h_element(i=i_1, j=i_2, gm_1=f_g, gm_2=f_g, fn=fn, cn=cn, relation="dd", angles_navigation=angles_navigation, r_f=r_f, r1=r_f[i_1], r2=r_f[i_2], q_f=q_f, q1=q_f[i_1], q2=q_f[i_2], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
+                    row.append(h_element(gm_1=f_g, gm_2=f_g, fn=fn, cn=cn, relation="dd", angles_navigation=angles_navigation, r_f=r_f, r1=r_f[i_1], r2=r_f[i_2], q_f=q_f, q1=q_f[i_1], q2=q_f[i_2], multy_antenna_send=multy_antenna_send, multy_antenna_take=multy_antenna_take, w_0=w_0, t=t))
             else:
                 if return_template:
                     row.append(Matrix([0]))

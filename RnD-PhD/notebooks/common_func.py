@@ -59,7 +59,7 @@ def init_symbol_params():
     print(f"Высота орбиты: {int(o.v.HEIGHT // 1e3)} км\nПериод орбиты: {round((2*np.pi/o.v.W_ORB) / 3600, 2)} часов\nПлотность атмосферы: {num_params['ρ']} кг/м³")
 
     # Подстановка символьных переменных
-    t, ω, μ, ρ, r_orb, v_orb = var("t ω_0 μ ρ r_0 v_0")
+    t, ω, μ, ρ, r_orb, v_orb = var("t w_0 μ ρ r_0 v_0")
     o.v.ORBIT_RADIUS = r_orb
     o.v.V_ORB = v_orb
     o.v.W_ORB = ω

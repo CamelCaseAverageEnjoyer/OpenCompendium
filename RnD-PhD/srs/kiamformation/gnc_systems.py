@@ -172,10 +172,11 @@ class KalmanFilter:
         if if_correction:
             # >>>>>>>>>>>> Этап коррекции <<<<<<<<<<<<
             self.Phi = self.get_Phi(w=None, w0=None)
-            Q_tilda = self.Phi @ self.D @ self.Q @ self.D.T @ self.Phi.T * v.dT
+            Q_tilda = self.Phi @ self.D @ self.Q @ self.D.T @ self.Phi.T * v.dT_nav
             P_m = self.Phi @ self.P @ self.Phi.T + Q_tilda
-            H = h_matrix(t=p.t, v=v, f=f, c=c, r_f=d['r orf'], r_c=c.r_orf,
-                         q_f=d['q-3 irf'], q_c=[c.q[i].vec for i in range(c.n)])
+            q_f = d['q-3 irf'] if v.NAVIGATION_ANGLES else [f.q[i].vec for i in range(f.n)]
+            q_c = [c.q[i].vec for i in range(c.n)] if v.NAVIGATION_ANGLES else [c.q[i].vec for i in range(c.n)]
+            H = h_matrix(t=p.t, v=v, f=f, c=c, r_f=d['r orf'], r_c=c.r_orf, q_f=q_f, q_c=q_c)
 
             R = np.eye(z_len) * v.KALMAN_COEF['r']
             k_ = P_m @ H.T @ np.linalg.inv(H @ P_m @ H.T + R)
@@ -189,7 +190,7 @@ class KalmanFilter:
             _, simgas, _ = np.linalg.svd(self.observability_gramian)
             p.record.loc[p.iter, f'gramian sigma criteria'] = np.min(simgas)/np.max(simgas)
 
-            tmp = control.obsv((self.Phi - np.zeros(self.Phi.shape)) / self.v.dT_nav, H)
+            tmp = control.obsv((self.Phi - np.eye(self.Phi.shape[0])) / self.v.dT_nav, H)
             _, simgas, _ = np.linalg.svd(tmp)
             p.record.loc[p.iter, f'linear rank criteria'] = np.linalg.matrix_rank(tmp)
             p.record.loc[p.iter, f'linear sigma criteria'] = np.min(simgas)/np.max(simgas)

@@ -231,12 +231,20 @@ class FemtoSat(Apparatus):
         tol = 0 if v.START_NAVIGATION == v.NAVIGATIONS[2] else tol
 
         # Новый формат
-        self.apriori_params = {'r orf': [self.r_orf[i] * tol + v.spread('r', name=self.name) * (1 - tol)
-                                         for i in range(self.n)],
-                               'v orf': [self.v_orf[i] * tol + v.spread('v', name=self.name) * (1 - tol)
-                                         for i in range(self.n)],
-                               'w brf': [self.w_brf[i] * tol + self.w_brf_[i] * (1 - tol) for i in range(self.n)],
-                               'q-3 irf': [self.q[i].vec * tol + self.q_[i].vec * (1 - tol) for i in range(self.n)]}
+        if v.NAVIGATION_ANGLES:
+            self.apriori_params = {'r orf': [self.r_orf[i] * tol + v.spread('r', name=self.name) * (1 - tol)
+                                             for i in range(self.n)],
+                                   'v orf': [self.v_orf[i] * tol + v.spread('v', name=self.name) * (1 - tol)
+                                             for i in range(self.n)],
+                                   'w brf': [self.w_brf[i] * tol + self.w_brf_[i] * (1 - tol) for i in range(self.n)],
+                                   'q-3 irf': [self.q[i].vec * tol + self.q_[i].vec * (1 - tol) for i in range(self.n)]}
+        else:
+            self.apriori_params = {'r orf': [self.r_orf[i] * tol + v.spread('r', name=self.name) * (1 - tol)
+                                             for i in range(self.n)],
+                                   'v orf': [self.v_orf[i] * tol + v.spread('v', name=self.name) * (1 - tol)
+                                             for i in range(self.n)],
+                                   'w brf': [self.w_brf[i] for i in range(self.n)],
+                                   'q-3 irf': [self.q[i].vec for i in range(self.n)]}
 
     def deploy(self, v: Variables, c: CubeSat, i_c: int) -> None:
         """Функция отделения задаёт начальные условия для дочерних КА из материнских КА

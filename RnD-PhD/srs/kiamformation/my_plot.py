@@ -20,13 +20,21 @@ def plot_observability_criteria(o):
     x = o.p.record['t'].to_list()
     label_time = {"рус": f"Время, с", "eng": f"Time, s"}[o.v.LANGUAGE]
     labels = {"рус": ["", "", ""],
-              "eng": ["Gramian singular value rate", "Linear singular value rate", "Linear rank"]}[o.v.LANGUAGE]
-    fig, ax = plt.subplots(2, 1, figsize=(6, 8))
-    for i, s in enumerate(['gramian sigma criteria', 'linear sigma criteria', 'linear rank criteria']):
-        ax[i//2].plot(x, o.p.record[s].to_list(), label=labels[i])
-        ax[i//2].grid(True)
-        ax[i//2].set_xlabel(label_time, fontsize=CAPTION_SIZE)
-    ax[0].legend(fontsize=CAPTION_SIZE)
+              "eng": ["Gramian singular value rate", "Linear rank", "Linear singular value rate"]}[o.v.LANGUAGE]
+    fig, ax = plt.subplots(2, 1, figsize=(7, 7), gridspec_kw={'height_ratios': [3, 1]})
+    for i, s in enumerate(['gramian sigma criteria', 'linear rank criteria']):
+        ax[i].plot(x, o.p.record[s].to_list(), label=labels[i], c=o.v.MY_COLORS[i+7])
+        ax[i].grid(True)
+        ax[i].set_xlabel(label_time, fontsize=CAPTION_SIZE)
+        ax[i].legend(fontsize=CAPTION_SIZE)
+
+    ax2 = ax[0].twinx()  # instantiate a second Axes that shares the same x-axis
+    ax[0].set_ylabel(labels[0], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[0+7])
+    ax2.set_ylabel(labels[2], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[2])
+    ax2.plot(x, o.p.record['linear sigma criteria'].to_list(), c=o.v.MY_COLORS[2], label=labels[2])
+    ax2.legend(fontsize=CAPTION_SIZE)
+
+    # ax[0].legend(fontsize=CAPTION_SIZE)
     ax[1].legend(fontsize=CAPTION_SIZE)
     plt.show()
 
