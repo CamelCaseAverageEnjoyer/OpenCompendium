@@ -166,8 +166,12 @@ class KalmanFilter:
         p.record.loc[p.iter, f'ZModel&RealDifference min'] = tmp.min()
         p.record.loc[p.iter, f'ZModel&RealDifference max'] = tmp.max()
         p.record.loc[p.iter, f'ZModel&RealDifference N'] = len(z_model)
+        p.record.loc[p.iter, f'ZReal N'] = len(z_)
+        p.record.loc[p.iter, f'ZModel N'] = len(z_model)
         for i in range(len(z_model)):
             p.record.loc[p.iter, f'ZModel&RealDifference {i}'] = tmp[i]
+            p.record.loc[p.iter, f'ZReal {i}'] = abs(z_[i])
+            p.record.loc[p.iter, f'ZModel {i}'] = abs(z_model[i])
 
         if if_correction:
             # >>>>>>>>>>>> Этап коррекции <<<<<<<<<<<<
@@ -181,6 +185,7 @@ class KalmanFilter:
             R = np.eye(z_len) * v.KALMAN_COEF['r']
             k_ = P_m @ H.T @ np.linalg.inv(H @ P_m @ H.T + R)
             self.P = (np.eye(j * f.n) - k_ @ H) @ P_m
+            P = self.P
             raw_estimation_params = np.array(np.matrix(x_m) + k_ @ (z_ - z_model))[0]
 
             # Численный расчёт STM (state transition matrix)

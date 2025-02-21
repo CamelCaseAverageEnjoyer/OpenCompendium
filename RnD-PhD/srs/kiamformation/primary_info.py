@@ -50,7 +50,7 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
                         else:
                             S_1 = quart2dcm(obj1.q[i_1]) @ get_U(obj1, i_1, t).T
                             S_2 = quart2dcm(obj2.q[i_2]) @ get_U(obj2, i_2, t).T
-                    distance_measured = norm(dr)
+                    d2 = dr[0]**2 + dr[1]**2 + dr[2]**2
 
                     # >>>>>>>>>>>> Расчёт G и сигнала <<<<<<<<<<<<
                     for direction in ["1->2"]:  # , "2->1"]:
@@ -62,8 +62,8 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
                                       if_take=direction == "1->2", if_send=direction == "2->1")
                         g_vec = [g1 * g2 for g1 in G1 for g2 in G2]
 
-                        estimates = [gg / distance_measured**2 for gg in g_vec] if not produce else \
-                                    [(gg / distance_measured**2) + np.random.normal(0, noise) for gg in g_vec]
+                        estimates = [gg / d2 for gg in g_vec] if not produce else \
+                                    [(gg / d2) + np.random.normal(0, noise) for gg in g_vec]
                         est_dr = mean(estimates)
                         anw.extend(estimates)
 

@@ -302,7 +302,11 @@ class PhysicModel:
 
                 # Вращательное движение
                 if obj != self.a:  # and self.v.GAIN_MODEL_C_N + self.v.GAIN_MODEL_F_N > 0:
-                    obj.q[i], obj.w_brf[i] = rk4_attitude(v_=self.v, obj=obj, i=i, t=self.t)
+                    if obj == self.c:
+                        obj.q[i] = np.quaternion(1/2, -1/2, -1/2, -1/2)  # КОСТЫЛЬ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        obj.w_brf[i] = np.zeros(3)
+                    else:
+                        obj.q[i], obj.w_brf[i] = rk4_attitude(v_=self.v, obj=obj, i=i, t=self.t)
 
                 # Поступательное движение
                 if 'rk4' in self.v.SOLVER:

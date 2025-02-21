@@ -23,6 +23,7 @@ def load_simulation_trajectories(o: Objects, text: str):
     o.p.record = read_csv(text, sep=";")
     my_print(f"Из файла {text} прочитаны траектории", color='y')
 
+
 def find_close_solution(o: Objects):
     o.v.IF_NAVIGATION = False
     o.v.IF_ANY_PRINT = False
@@ -35,27 +36,30 @@ def find_close_solution(o: Objects):
     rc = o.c.r_orf
     vc = o.c.v_orf
 
+    dr_list = [0, -0.1, 0.1]
+    dv_list = [0, -0.01, 0.01]
     measurements = []
 
-    for r_x in [-1, 1]:
-        for r_y in [-1, 1]:
-            for r_z in [-1, 1]:
-                for v_x in [-0.01, 0.10]:
-                    for v_y in [-0.01, 0.01]:
-                        for v_z in [-0.01, 0.01]:
+    for dr_x in dr_list:
+        for dr_y in dr_list:
+            for dr_z in dr_list:
+                for dv_x in dv_list:
+                    for dv_y in dv_list:
+                        for dv_z in dv_list:
                             for i in range(o.f.n):
                                 o.init_classes()
                                 o.f.q[i] = qf[i]
                                 o.f.w_brf[i] = wf[i]
-                                o.f.r_orf[i] = rf[i] + np.array([r_x, r_y, r_z])
-                                o.f.v_orf[i] = vf[i] + np.array([v_x, v_y, v_z])
+                                o.f.r_orf[i] = rf[i] + np.array([dr_x, dr_y, dr_z])
+                                o.f.v_orf[i] = vf[i] + np.array([dv_x, dv_y, dv_z])
                                 o.integrate(t=o.v.TIME)
                                 # measurements.append(o.v.MEASURES_VECTOR)
                                 measurements.append(o.p.record[f'MEASURES_VECTOR {0}'])
-    for i in measurements:
-        plt.plot(i)
+    for i, m in enumerate(measurements):
+        plt.plot(np.abs(m - measurements[0]), color='k' if i == 0 else 'g', ls=':')
+    plt.legend()
+    plt.grid()
     plt.show()
-
 
 
 def solve_minimization_new(o: Objects, config_choose_n: int):

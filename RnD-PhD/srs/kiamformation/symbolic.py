@@ -32,64 +32,69 @@ def sympy_mean(a):
     return sum(list(a)) / len(a)
 
 def cross(a, b):
-    return np.cross(a, b) if isinstance(a, np.ndarray | list) else a.cross(b)
+    return np.cross(a, b) if (isinstance(a, np.ndarray) or isinstance(a, list)) else a.cross(b)
 
 def sin(a):
-    return np.sin(a) if isinstance(a, int | float | np.ndarray) else sympy.sin(a)
+    return np.sin(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.sin(a)
 
 def cos(a):
-    return np.cos(a) if isinstance(a, int | float | np.ndarray) else sympy.cos(a)
+    return np.cos(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.cos(a)
 
 def sqrt(a):
-    return np.sqrt(a) if isinstance(a, int | float | np.ndarray) else sympy.sqrt(a)
+    return np.sqrt(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.sqrt(a)
 
 def tan(a):
-    return np.tan(a) if isinstance(a, int | float | np.ndarray) else sympy.tan(a)
+    return np.tan(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.tan(a)
 
 def arctan(a):
-    return np.arctan(a) if isinstance(a, int | float | np.ndarray) else sympy.atan(a)
+    return np.arctan(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.atan(a)
 
 def append(*args):
-    return np.append(*args) if isinstance(args[0][0], int | float | np.ndarray) else sympy_append(*args)
+    a = args[0][0]
+    return np.append(*args) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else \
+        sympy_append(*args)
 
 def pi(a):
     """Возвращает число π в зависимости от типа переменной 'a'
     :param a: при (int | float | np.ndarray) требует численное значение π, иначе символьное"""
-    return np.pi if isinstance(a, int | float | np.ndarray) else sympy.pi
+    return np.pi if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.pi
 
 def mean(a):
-    return np.mean(a) if isinstance(a[0], int | float | np.ndarray) else sympy_mean(a)
+    return np.mean(a) if (isinstance(a[0], np.ndarray) or isinstance(a[0], int) or isinstance(a[0], float)) else sympy_mean(a)
 
 def vstack(*args):
-    return np.vstack(args) if isinstance(args[0][0], int | float | np.ndarray) else sympy.Matrix.vstack(*args)
+    a = args[0][0]
+    return np.vstack(args) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.Matrix.vstack(*args)
 
 def bmat(*args):
     try:
-        return np.bmat(*args) if isinstance(args[0][0][0], int | float | np.ndarray) else \
+        a = args[0][0][0]
+        return np.bmat(*args) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else \
             sympy.Matrix(sympy.BlockMatrix(*args))
     except:
-        return np.bmat(*args) if isinstance(args[0][0], int | float | np.ndarray) else \
+        a = args[0][0]
+        return np.bmat(*args) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else \
             sympy.Matrix(sympy.BlockMatrix(*args))
 
 def norm(a):
-    return np.linalg.norm(a) if isinstance(a, int | float | np.ndarray | list) else sympy_norm(a)
+    return np.linalg.norm(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float) or isinstance(a, list)) else sympy_norm(a)
 
 def inv(a):
-    return np.linalg.inv(a) if isinstance(a, int | float | np.ndarray) else a.inv()
+    return np.linalg.inv(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else a.inv()
 
 def vec_type(a, b=None):
     if b is not None:
-        return np.array(a) if (isinstance(b, int | float | np.ndarray)) else sympy.Matrix(a)
+        return np.array(a) if (isinstance(b, np.ndarray) or isinstance(b, int) or isinstance(b, float)) else sympy.Matrix(a)
     try:
-        return np.array(a) if (isinstance(a[0][0], int | float | np.ndarray)) else sympy.Matrix(a)
+        return np.array(a) if (isinstance(a[0][0], np.ndarray) or isinstance(a[0][0], int) or isinstance(a[0][0], float)) else sympy.Matrix(a)
     except:
-        return np.array(a) if (isinstance(a[0], int | float | np.ndarray)) else sympy.Matrix(a)
+        return np.array(a) if (isinstance(a[0], np.ndarray) or isinstance(a[0], int) or isinstance(a[0], float)) else sympy.Matrix(a)
 
 def quat(a):
-    return np.quaternion(*a) if isinstance(a[0], int | float | np.ndarray) else sympy.Matrix([0, a[0], a[1], a[2]])
+    return np.quaternion(*a) if (isinstance(a[0], np.ndarray) or isinstance(a[0], int) or isinstance(a[0], float)) else sympy.Matrix([0, a[0], a[1], a[2]])
 
 def dot(a, b):
-    return a @ b if isinstance(a[0], int | float | np.ndarray) else (a.T @ b)  # [0]
+    return a @ b if (isinstance(a[0], np.ndarray) or isinstance(a[0], int) or isinstance(a[0], float)) else (a.T @ b)  # [0]
 
 def block_diag(*args):
     import scipy
@@ -97,7 +102,7 @@ def block_diag(*args):
         sympy.Matrix(sympy.BlockDiagMatrix(*args))
 
 def zeros(dims, template):
-    return np.zeros(dims) if isinstance(template, int | float | np.ndarray) else \
+    return np.zeros(dims) if (isinstance(template, np.ndarray) or isinstance(template, int) or isinstance(template, float)) else \
         sympy.zeros(*dims)
 
 
