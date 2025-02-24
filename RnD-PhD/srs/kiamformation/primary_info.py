@@ -20,6 +20,7 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
     anw, notes = [], []
     S_1, S_2, dr, distance = None, None, None, None
     t = p.t if t is None else t
+    g_all = []
 
     def get_U(obj, i, t):
         from dynamics import get_matrices
@@ -61,6 +62,7 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
                         G2 = get_gain(v=v, obj=obj2, r=S_2 @ dr,
                                       if_take=direction == "1->2", if_send=direction == "2->1")
                         g_vec = [g1 * g2 for g1 in G1 for g2 in G2]
+                        g_all.extend(g_vec)
 
                         estimates = [gg / d2 for gg in g_vec] if not produce else \
                                     [(gg / d2) + np.random.normal(0, noise) for gg in g_vec]
@@ -84,6 +86,10 @@ def measure_antennas_power(c: CubeSat, f: FemtoSat, v: Variables, noise: float =
     if produce:
         v.MEASURES_VECTOR = vec_type(anw)
         v.MEASURES_VECTOR_NOTES = notes
+        if isinstance(dr, np.ndarray):
+            p.record.loc[p.iter, f'G N'] = len(g_all)
+            for i in range(len(g_all)):
+                p.record.loc[p.iter, f'G {i}'] = g_all[i]
     else:
         return vec_type(anw), notes
 

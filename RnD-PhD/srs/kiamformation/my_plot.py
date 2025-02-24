@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d import proj3d
 from config import *
 
 
-FEMTO_RATE = 1/3  # 5e2
+FEMTO_RATE = 1  # 5e2
 CUBE_RATE = 1/3  # 5e2
 TITLE_SIZE = 15  # 15
 CAPTION_SIZE = 13  # 13
@@ -23,10 +23,9 @@ def plot_observability_criteria(o):
               "eng": ["Gramian singular value rate", "Linear rank", "Linear singular value rate"]}[o.v.LANGUAGE]
     fig, ax = plt.subplots(2, 1, figsize=(7, 7), gridspec_kw={'height_ratios': [3, 1]})
     for i, s in enumerate(['gramian sigma criteria', 'linear rank criteria']):
-        ax[i].plot(x, o.p.record[s].to_list(), c=o.v.MY_COLORS[i+7])
+        ax[i].plot(x, o.p.record[s].to_list(), c=o.v.MY_COLORS[i+7], label=labels[i])
         ax[i].grid(True)
         ax[i].set_xlabel(label_time, fontsize=CAPTION_SIZE)
-        # ax[i].legend(fontsize=CAPTION_SIZE)
 
     ax2 = ax[0].twinx()  # instantiate a second Axes that shares the same x-axis
     ax[0].set_ylabel(labels[0], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[0+7])
@@ -55,16 +54,15 @@ def plot_distance(o):
             labels = {"рус": ["Разница измерений модельных и полученных", "Ошибка определения положения Δr"],
                       "eng": ["Error or predicted measurement Δᵖʳᵉᵈⁱᶜᵗ", "Real measurement y", "Model measurement y"]}[o.v.LANGUAGE] \
                 if i_f == 0 else [None for _ in range(100)]
-            max_y2 = 0.
             for jj in range(int(o.p.record[f'ZModel&RealDifference N'][1])):
                 y2 = o.p.record[f'ZModel&RealDifference {jj}'].to_list()
                 axes[0].plot(x, y2, c=o.v.MY_COLORS[6], label=labels[0] if i_c == 0 and jj == 0 else None, lw=1)
-            for jj in range(int(o.p.record[f'ZReal N'][1])):
+            '''for jj in range(int(o.p.record[f'ZReal N'][1])):
                 y1 = o.p.record[f'ZReal {jj}'].to_list()
                 axes[0].plot(x, y1, c=o.v.MY_COLORS[11], label=labels[1] if i_c == 0 and jj == 0 else None, lw=1, ls="-")
             for jj in range(int(o.p.record[f'ZModel N'][1])):
                 y1 = o.p.record[f'ZModel {jj}'].to_list()
-                axes[0].plot(x, y1, c=o.v.MY_COLORS[13], label=labels[2] if i_c == 0 and jj == 0 else None, lw=1, ls="-")
+                axes[0].plot(x, y1, c=o.v.MY_COLORS[13], label=labels[2] if i_c == 0 and jj == 0 else None, lw=1, ls="-")'''
     axes[0].set_xlabel(label_time, fontsize=CAPTION_SIZE)
     axes[0].set_ylabel({"рус": f"Ошибка, м", "eng": f"Error, m"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
     axes[0].legend(fontsize=CAPTION_SIZE)
@@ -75,8 +73,8 @@ def plot_distance(o):
         for j, c in enumerate('xyz'):
             y = o.p.record[f'{o.f.name} KalmanPosError {c} {i_f}'].to_list()
             axes[1].plot(x, y, c=o.v.MY_COLORS[j+3], label=labels[j] if i_f == 0 else None)
-        y3 = o.p.record[f'{o.f.name} KalmanPosError r {i_f}'].to_list()
-        axes[1].plot(x, y3, c='k', label=labels[3] if i_f == 0 else None)
+        # y3 = o.p.record[f'{o.f.name} KalmanPosError r {i_f}'].to_list()
+        # axes[1].plot(x, y3, c='k', label=labels[3] if i_f == 0 else None)
     axes[1].set_xlabel(label_time, fontsize=CAPTION_SIZE)
     axes[1].set_ylabel({"рус": f"Δr компоненты, м", "eng": f"Estimation error, m"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
     axes[1].legend(fontsize=CAPTION_SIZE)
@@ -103,6 +101,12 @@ def plot_distance(o):
     plt.show()
 
     plot_observability_criteria(o)
+
+    '''fig, ax = plt.subplots()
+    for i in range(int(o.p.record[f'G N'][1])):
+        ax.plot(x, o.p.record[f'G {i}'].to_list())
+    plt.title("gains")
+    plt.show()'''
 
 def plot_atmosphere_models(n: int = 100):
     from dynamics import get_atm_params
@@ -154,9 +158,9 @@ def show_chipsat(o, j, clr, opacity, reference_frame: str, return_go: bool = Tru
         for i in range(4):
             r = S.T @ np.array([x[i], y[i], z[i]])
             if reference_frame == 'ORF' and xyz is not None:
-                r[0] *= xyz[0]
-                r[1] *= xyz[1]
-                r[2] *= xyz[2]
+                r[0] *= xyz[0] if o.v.RELATIVE_SIDES else max(xyz)
+                r[1] *= xyz[1] if o.v.RELATIVE_SIDES else max(xyz)
+                r[2] *= xyz[2] if o.v.RELATIVE_SIDES else max(xyz)
             x[i] = r[0] + o.p.record[f'{o.f.name} r x {reference_frame.lower()} {j}'].to_list()[-1]
             y[i] = r[1] + o.p.record[f'{o.f.name} r y {reference_frame.lower()} {j}'].to_list()[-1]
             z[i] = r[2] + o.p.record[f'{o.f.name} r z {reference_frame.lower()} {j}'].to_list()[-1]
@@ -166,31 +170,40 @@ def show_chipsat(o, j, clr, opacity, reference_frame: str, return_go: bool = Tru
             r_estimation.append(o.p.record[f'{o.f.name} KalmanPosEstimation {c} {j}'].to_list())
         if return_go:
             return [go.Mesh3d(x=x, y=y, z=z, color=clr, opacity=opacity),
-                    go.Scatter3d(x=r_real[0], y=r_real[1], z=r_real[2], mode='lines'),
-                    go.Scatter3d(x=r_estimation[0], y=r_estimation[1], z=r_estimation[2], mode='lines')]
+                    go.Scatter3d(x=r_real[0], y=r_real[1], z=r_real[2], mode='lines',
+                                 line=dict(color='darkgray', width=5)),
+                    go.Scatter3d(x=r_estimation[0], y=r_estimation[1], z=r_estimation[2], mode='lines',
+                                 line=dict(color='blue', width=5))]
     ax.plot([x[0], x[2], x[3], x[1], x[0]],
             [y[0], y[2], y[3], y[1], y[0]],
             [z[0], z[2], z[3], z[1], z[0]], c='gray', linewidth=3)
 
 def show_cubesat(o, j, reference_frame: str, xyz=None) -> list:
-    from dynamics import get_matrices
+    # from dynamics import get_matrices
+    from my_math import quart2dcm
     global CUBE_RATE
-    total_cubes = 30
+    n_legs = 4
+    total_cubes = 6 * (n_legs + 1)
     r = [[[] for _ in range(total_cubes)] for _ in range(3)]
     # Памятка: r[x/y/z][0..5 - yellow, 6..29 - gray][1..4 - sides of square]
-    sequence = [[0, 0], [0, 1], [1, 0], [1, 1]]
-    for i in range(3):
-        for k in range(2):
-            r[i][k + i * 2] = [(-1)**(k+1) * o.c.size[i] * CUBE_RATE for _ in range(4)]
+    sequence = [[0, 0], [0, 1], [1, 1], [1, 0]]
 
     shift = [[-o.c.size[i] * CUBE_RATE, o.c.size[i] * CUBE_RATE] for i in range(3)]
     legs = [o.c.legs_x, o.c.legs_x, o.c.legs_z]
-    n_legs = int((total_cubes - 6) // 6)
     bound_legs = [[[((-1)**sequence[s][0] * o.c.size[0] - legs[0]) * CUBE_RATE,
                     ((-1)**sequence[s][0] * o.c.size[0] + legs[0]) * CUBE_RATE],
                    [((-1)**sequence[s][1] * o.c.size[1] - legs[1]) * CUBE_RATE,
                     ((-1)**sequence[s][1] * o.c.size[1] + legs[1]) * CUBE_RATE],
                    [(-o.c.size[2] - legs[2]) * CUBE_RATE, (o.c.size[2] + legs[2]) * CUBE_RATE]] for s in range(n_legs)]
+
+    for i in range(3):
+        for k in range(2):
+            r[i][k + i * 2] = [(-1)**(k+1) * o.c.size[i] * CUBE_RATE for _ in range(4)]
+            tmp = k + i * 2
+            ind1 = 0 + int(i < 1)
+            ind2 = 1 + int(i < 2)
+            r[ind1][tmp].extend([shift[ind1][sequence[m][0]] for m in range(4)])
+            r[ind2][tmp].extend([shift[ind2][sequence[m][1]] for m in range(4)])
 
     for s in range(n_legs):
         r[0][(s + 1) * 6 + 0] = [bound_legs[s][0][0], bound_legs[s][0][0], bound_legs[s][0][0], bound_legs[s][0][0]]
@@ -217,23 +230,16 @@ def show_cubesat(o, j, reference_frame: str, xyz=None) -> list:
         r[1][(s + 1) * 6 + 5] = [bound_legs[s][1][0], bound_legs[s][1][0], bound_legs[s][1][1], bound_legs[s][1][1]]
         r[2][(s + 1) * 6 + 5] = [bound_legs[s][2][1], bound_legs[s][2][1], bound_legs[s][2][1], bound_legs[s][2][1]]
 
-    for i in range(3):
-        for k in range(2):
-            tmp = k + i * 2
-            ind1 = 0 + int(i < 1)
-            ind2 = 1 + int(i < 2)
-            for m in range(4):
-                r[ind1][tmp] += [shift[ind1][sequence[m][0]]]
-                r[ind2][tmp] += [shift[ind2][sequence[m][1]]]
-
-    U, S, A, _ = get_matrices(v=o.v, t=o.p.t, obj=o.c, n=j)
+    # Костыль: не отображаются ровно вертикальные грани
+    # U, S, A, _ = get_matrices(v=o.v, t=o.p.t, obj=o.c, n=j)
+    S = quart2dcm(np.quaternion(1/2+0.01, -1/2, -1/2, -1/2).normalized())
     for k in range(total_cubes):
         for i in range(4):
             r1 = S.T @ np.array([r[0][k][i], r[1][k][i], r[2][k][i]])
             if reference_frame == 'ORF' and xyz is not None:
-                r1[0] *= xyz[0]
-                r1[1] *= xyz[1]
-                r1[2] *= xyz[2]
+                r1[0] *= xyz[0] if o.v.RELATIVE_SIDES else max(xyz)
+                r1[1] *= xyz[1] if o.v.RELATIVE_SIDES else max(xyz)
+                r1[2] *= xyz[2] if o.v.RELATIVE_SIDES else max(xyz)
             r[0][k][i] = r1[0] + o.p.record[f'{o.c.name} r x {reference_frame.lower()} {j}'].to_list()[-1]
             r[1][k][i] = r1[1] + o.p.record[f'{o.c.name} r y {reference_frame.lower()} {j}'].to_list()[-1]
             r[2][k][i] = r1[2] + o.p.record[f'{o.c.name} r z {reference_frame.lower()} {j}'].to_list()[-1]
@@ -244,7 +250,7 @@ def show_cubesat(o, j, reference_frame: str, xyz=None) -> list:
     r = []
     for c in 'xyz':
         r.append(o.p.record[f'{o.c.name} r {c} {reference_frame.lower()} {j}'].to_list())
-    anw.append(go.Scatter3d(x=r[0], y=r[1], z=r[2], mode='lines'))
+    anw.append(go.Scatter3d(x=r[0], y=r[1], z=r[2], mode='lines', line=dict(color='tan', width=5)))
     return anw
 
 def plot_model_gain(o: Objects, n: int = 20):

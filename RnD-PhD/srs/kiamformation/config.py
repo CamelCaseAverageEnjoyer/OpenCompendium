@@ -99,7 +99,7 @@ class Variables:
         self.RVW_ChipSat_SPREAD = [1e2, 1e-1, 1e-4]
         self.KALMAN_COEF = {'q': [1e-15]*2, 'p': [1e-8]*4, 'r': 1e-1}
         self.SHAMANISM = {'KalmanQuaternionNormalize': True,   # Нормировка кватернионов в фильтре Калмана
-                          'KalmanSpinLimit': [False, 1e-2],  # Ограничение скорости вращения в прогнозе фильтра Калмана
+                          'KalmanSpinLimit': [True, 1e-2],  # Ограничение скорости вращения в прогнозе фильтра Калмана
                           'ClohessyWiltshireC1=0': True,  # Траектории без дрейфа (зануление C1, даже при аэродинамике)
                           'KalmanVelocityLimit': [False, 1e3],
                           'KalmanPositionLimit': [False, 1e4]}
@@ -146,6 +146,7 @@ class Variables:
         self.IF_ANY_PRINT = True
         self.IF_TEST_PRINT = True
         self.IF_ANY_SHOW = False  # а ты к чему относишься?
+        self.RELATIVE_SIDES = False
         self.NO_LINE_FLAG = -10
         self.EARTH_FILE_NAME = ["earth1.jpg", "earth2.jpg", "earth3.webp"][2]
         self.LANGUAGE = ['рус', 'eng'][1]

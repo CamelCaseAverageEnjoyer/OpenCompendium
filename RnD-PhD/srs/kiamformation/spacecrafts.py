@@ -225,10 +225,10 @@ class FemtoSat(Apparatus):
         self.update_c(v=v)
 
         # УДАЛИТЬ!!!!
-        """from dynamics import r_hkw, v_hkw
+        '''from dynamics import r_hkw, v_hkw
         self.c_hkw = [np.array([0, 100, 0, 10, 10, 0])]
         self.r_orf[0] = r_hkw(self.c_hkw[0], v.W_ORB, 0)
-        self.v_orf[0] = v_hkw(self.c_hkw[0], v.W_ORB, 0)"""
+        self.v_orf[0] = v_hkw(self.c_hkw[0], v.W_ORB, 0)'''
 
         # Индивидуальные параметры управления
         self.m_self, self.b_env = [[np.zeros(3) for _ in range(self.n)] for _ in range(2)]
@@ -237,10 +237,10 @@ class FemtoSat(Apparatus):
         tol = 0 if v.START_NAVIGATION == v.NAVIGATIONS[2] else tol
 
         # Новый формат
-        """self.apriori_params = {'r orf': [self.r_orf[i] + [10, 10, 10] for i in range(self.n)],
+        '''self.apriori_params = {'r orf': [self.r_orf[i] + [10, 10, 10] for i in range(self.n)],
                                'v orf': [self.v_orf[i] for i in range(self.n)],
                                'w brf': [self.w_brf[i] for i in range(self.n)],
-                               'q-3 irf': [self.q[i].vec for i in range(self.n)]}"""
+                               'q-3 irf': [self.q[i].vec for i in range(self.n)]}'''
         if v.NAVIGATION_ANGLES:
             self.apriori_params = {'r orf': [self.r_orf[i] * tol + v.spread('r', name=self.name) * (1 - tol)
                                              for i in range(self.n)],

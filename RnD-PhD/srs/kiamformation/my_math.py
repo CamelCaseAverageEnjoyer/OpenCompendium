@@ -108,3 +108,7 @@ def matrix_minor(a, i: int, j: int):
         m.row_del(i)
         m.col_del(j)
         return det(m)
+
+def principal_minor(a, i: int):
+    if isinstance(a, np.ndarray):
+        return np.linalg.det(np.delete(np.delete(a, np.arange(i+1, len(a)), axis=0), np.arange(i+1, len(a)), axis=1))
