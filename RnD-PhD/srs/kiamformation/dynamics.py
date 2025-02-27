@@ -99,7 +99,8 @@ def get_aero_drag_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, rho
     if 'hkw' in vrs.SOLVER:
         v_real = v + vec_type([vrs.V_ORB, 0, 0])
         rho = get_atm_params(v=vrs, h=r[2] + vrs.HEIGHT)[0] if rho is None else rho
-        return - v_real * norm(v_real) * obj.get_blown_surface(cos_alpha) * rho / 2 / obj.mass
+        vrs.RHO = rho
+        return - v_real * norm(v_real) * obj.get_blown_surface(cos_alpha) * rho / obj.mass
 
 def get_full_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, w=None, mu=None, rho=None):
     """Возвращает вектор силы в ОСК, принимает параметры в ОСК"""
@@ -138,10 +139,12 @@ def get_torque(v: Variables, obj: Apparatus, q, w, t, i):
     """Вектор внешнего углового ускорения"""
     q = obj.q if q is None else q
     w = obj.w_brf if w is None else w
-    m_grav = np.zeros(3)
-    # U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
     J = obj.J
-    return inv(J) @ ( - cross(w, J @ w))  # m_grav
+    U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
+    R = A @ R_orb
+    # m_grav = np.zeros(3)
+    m_grav = 3*v.MU/np.linalg.norm(R)**5 * cross(R, J @ R)
+    return inv(J) @ (m_grav - cross(w, J @ w))
 
 def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):
     """При численном моделировании qw передаётся 1 numpy.ndarray;

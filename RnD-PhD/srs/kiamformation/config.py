@@ -155,7 +155,7 @@ class Variables:
         self.ECCENTRICITY = 0.0
         self.INCLINATION = deg2rad(0)  # В градусах
         self.EARTH_RADIUS = 6371e3  # kiam.units('earth')['DistUnit'] * 1e3
-        self.HEIGHT = 400e3
+        self.HEIGHT = 500e3
         self.ORBIT_RADIUS = self.EARTH_RADIUS + self.HEIGHT
 
         # Параметры орбиты
@@ -167,6 +167,7 @@ class Variables:
         self.W_ORB_VEC_IRF = self.W_ORB * np.array([0, -np.sin(self.INCLINATION), np.cos(self.INCLINATION)])
         self.V_ORB = np.sqrt(self.MU / self.ORBIT_RADIUS)
         self.J2 = 1.082 * 1e-3
+        self.RHO = 0.
 
         self.MY_SEC_IN_TURN = 2 * np.pi / self.W_ORB
         TimeUnit = 0.009322440916154166  # kiam.units('earth')['TimeUnit']

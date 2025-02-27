@@ -4,17 +4,20 @@ from config import Variables
 from symbolic import *
 
 # >>>>>>>>>>>> Диаграмма направленности антенн связи <<<<<<<<<<<<
+def r_a(ind: str):
+    if ind not in ['x', 'y', 'z']:
+        raise ValueError(f"Координата «{ind}» должна быть среди: [x, y, z]")
+    return [int(ind == 'x'), int(ind == 'y'), int(ind == 'z')]
+
 def local_dipole(v: Variables, r, ind: str = 'x', model='quarter-wave monopole'):
     """Возвращает коэффициент усиления от 1-й антенны
     :param v: Объект класса Variables
     :param r: Радиус-вектор между антенной-трансмиттером и антенной-ресивером в ССК
     :param ind: Координата направления антенны-ресивера в ССК
     :param model: """
-    if ind not in ['x', 'y', 'z']:
-        raise ValueError(f"Координата «{ind}» должна быть среди: [x, y, z]")
     r_12 = r / norm(r)
     r_12 += vec_type([0.03, 0.05, 0], b=r[0]) * v.DISTORTION  # Вручную задаваемое искажение диаграммы направленности
-    r_antenna_brf = vec_type([int(ind == 'x'), int(ind == 'y'), int(ind == 'z')], b=r[0])
+    r_antenna_brf = vec_type(r_a(ind), b=r[0])
     
     sin_theta = norm(cross(r_antenna_brf, r_12))
     cos_theta = dot(r_antenna_brf, r_12)
@@ -26,7 +29,7 @@ def local_dipole(v: Variables, r, ind: str = 'x', model='quarter-wave monopole')
         return sin_theta**3
 
 def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False,
-             multy_take=None, multy_send=None, gm=None):
+             multy_take=None, multy_send=None, gm=None, return_dir: bool = False):
     """Возвращает вектор коэффициентов усиления от каждой антенны КА
     :param v: Объект класса Variables
     :param obj: Переменная класса Apparatus
@@ -35,6 +38,7 @@ def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False,
     :param if_send: Флаг на посланный сигнал
     :param multy_take: Разлагается ли сигнал на КА-ресивере (опционально)
     :param multy_send: Разлагается ли сигнал на КА-трасмитере (опционально)
+    :param return_dir: Вернуть только вектор направления антенны в ССК КА (опционально)
     :param gm: Количество и тип антенн (опционально)"""
     multy_take = v.MULTI_ANTENNA_TAKE if multy_take is None else multy_take
     multy_send = v.MULTI_ANTENNA_SEND if multy_send is None else multy_send
@@ -42,15 +46,12 @@ def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False,
 
     # Памятка: GAIN_MODES = ['isotropic', '1 antenna', '2 antennas', '3 antennas']
     if gm == v.GAIN_MODES[1]:
-        return [local_dipole(v, r, 'x')]
+        return [local_dipole(v, r, 'x')] if not return_dir else [r_a('x')]
     if gm == v.GAIN_MODES[2]:
-        if (if_take and multy_take) or (if_send and multy_send):
-            return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y')]
-        return [local_dipole(v, r, 'x') + local_dipole(v, r, 'y')]
+        return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y')] if not return_dir else [r_a('x'), r_a('y')]
     if gm == v.GAIN_MODES[3]:
-        if (if_take and multy_take) or (if_send and multy_send):
-            return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y'), local_dipole(v, r, 'z')]
-        return [local_dipole(v, r, 'x') + local_dipole(v, r, 'y') + local_dipole(v, r, 'z')]
+        return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y'), local_dipole(v, r, 'z')] \
+            if not return_dir else [r_a('x'), r_a('y'), r_a('z')]
     return [1]
 
 
@@ -84,7 +85,7 @@ class Apparatus:
         self.operating_mode = [v.OPERATING_MODES[0] for _ in range(self.n)]
 
     def get_blown_surface(self, cos_alpha):
-        return self.size[0] * self.size[1] * abs(cos_alpha) * self.c_resist
+        return abs(self.size[0] * self.size[1] * abs(cos_alpha) * self.c_resist)
 
     def update_c(self, v):
         from dynamics import get_c_hkw

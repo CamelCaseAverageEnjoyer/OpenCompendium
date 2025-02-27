@@ -30,6 +30,7 @@ class KalmanFilter:
 
         self.estimation_params = self.params_dict2vec(d=f.apriori_params, separate_spacecraft=True)
         self.j = len(self.estimation_params[0])  # Вектор состояния 1 чипсата
+        self.estimation_params_d = self.params_vec2dict(self.estimation_params)
         self.STM = None
         self.observability_gramian = None
 
@@ -54,8 +55,10 @@ class KalmanFilter:
         if self.v.IF_TEST_PRINT:
             my_print(f"Матрицы Ф:{self.Phi.shape}, Q:{self.Q.shape}, P:{self.P.shape}, D:{self.D.shape}", color='g')
 
-    def get_Phi_1(self, w=None, w0=None):
+    def get_Phi_1(self, i: int, w=None, w0=None, q=None):
+        from dynamics import get_matrices
         w0 = self.v.W_ORB if w0 is None else w0
+        q = self.f.q if q is None else q
         if not self.v.NAVIGATION_ANGLES:  # Оценка орбитального движения
             return np.array([[0, 0, 0, 1, 0, 0],
                              [0, 0, 0, 0, 1, 0],
@@ -64,28 +67,54 @@ class KalmanFilter:
                              [0, - w0 ** 2, 0, 0, 0, 0],
                              [0, 0, 3 * w0 ** 2, 2 * w0, 0, 0]]) * self.v.dT + np.eye(self.j)
         else:  # Оценка орбитального и углового движения
-            Phi_w = inv(self.f.J) @ (-get_antisymmetric_matrix(w) @ self.f.J +
-                                     get_antisymmetric_matrix(self.f.J @ w))
-            return np.array([[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 1 / 2, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 / 2, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 / 2],
-                             [0, 0, 0, 0, 0, 0, 0, 0, -2 * w0, 0, 0, 0],
-                             [0, -w0 ** 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                             [0, 0, 3 * w0 ** 2, 0, 0, 0, 2 * w0, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) * self.v.dT + np.eye(self.j) + \
-                bmat([[np.zeros((9, 12))],
-                      [np.zeros((3, 9)), Phi_w * self.v.dT]])
+            J = self.f.J
+            Wj = inv(J) @ (-get_antisymmetric_matrix(w) @ J + get_antisymmetric_matrix(J @ w))
+            Ww = get_antisymmetric_matrix(w)
 
-    def get_Phi(self, w=None, w0=None):
+            U, S, A, R_orb = get_matrices(v=self.v, t=self.p.t, obj=self.f, n=i)
+            R = quart2dcm(vec2quat(*np.array(self.estimation_params_d['q-3 irf']))) @ R_orb
+            eta = R / np.linalg.norm(R)
+            Wr = get_antisymmetric_matrix(eta)
+            Wq = inv(self.f.J) @ (6*self.v.W_ORB**2 * (Wr @ J @ Wr - get_antisymmetric_matrix(J @ eta) @ Wr))
+
+            if self.v.DYNAMIC_MODEL['aero drag']:
+                q_x, q_y, q_z = q
+                t = self.p.t
+                w_0 = self.v.W_ORB
+
+                s1 = (2*q_x**2/sqrt(-q_x**2 - q_y**2 - q_z**2 + 1) - 2*sqrt(-q_x**2 - q_y**2 - q_z**2 + 1))*cos(t*w_0) - (2*q_x*q_y/sqrt(-q_x**2 - q_y**2 - q_z**2 + 1) + 2*q_z)*sin(t*w_0)
+                s2 = -(2*q_y**2/sqrt(-q_x**2 - q_y**2 - q_z**2 + 1) - 2*sqrt(-q_x**2 - q_y**2 - q_z**2 + 1))*sin(t*w_0) + (2*q_x*q_y/sqrt(-q_x**2 - q_y**2 - q_z**2 + 1) + 2*q_z)*cos(t*w_0)
+                s3 = -(2*q_x + 2*q_y*q_z/sqrt(-q_x**2 - q_y**2 - q_z**2 + 1))*sin(t*w_0) + (2*q_x*q_z/sqrt(-q_x**2 - q_y**2 - q_z**2 + 1) + 2*q_y)*cos(t*w_0)
+
+                c = self.f.get_blown_surface(cos_alpha=1) * self.v.RHO / self.f.mass
+                v2 = self.v.V_ORB**2
+                s1, s2, s3 = c*s1*v2, c*s2*v2, c*s3*v2
+            else:
+                s1, s2, s3 = 0, 0, 0
+
+            O = np.zeros((3, 3))
+            E = np.eye(3)
+            A = np.array([[0, 0, 0],
+                          [0, -w0**2, 0],
+                          [0, 0, 3*w0**2]])
+            B = np.array([[s1, s2, s3],
+                          [0, 0, 0],
+                          [0, 0, 0]])
+            C = np.array([[0, 0, -2*w0],
+                          [0, 0, 0],
+                          [2*w0, 0, 0]])
+            F = bmat([[O, O, E, O],
+                      [O, -Ww, O, E/2],
+                      [A, B, C, O],
+                      [O, Wq, O, Wj]])
+
+            return F * self.v.dT + np.eye(self.j)
+
+    def get_Phi(self, w=None, w0=None, q=None):
         w0 = self.v.W_ORB if w0 is None else w0
-        w = [self.f.apriori_params['w brf'][i] for i in range(self.f.n)] if w is None else w
-        return bmat([[np.zeros([self.j, self.j])] * i + [self.get_Phi_1(w=w[i], w0=w0)] +
-                     [np.zeros([self.j, self.j])] * (self.f.n - i - 1) for i in range(self.f.n)])
+        w = [self.estimation_params_d['w brf'][i] for i in range(self.f.n)] if w is None else w
+        q = [self.estimation_params_d['q-3 irf'][i] for i in range(self.f.n)] if q is None else q
+        return block_diag(*[self.get_Phi_1(w=w[i], w0=w0, i=i, q=q[i]) for i in range(self.f.n)])
 
     def params_vec2dict(self, params: list = None, j: int = None, separate_spacecraft: bool = True):
         p = self.estimation_params if params is None else params
@@ -154,13 +183,14 @@ class KalmanFilter:
                                       'q-3 irf': [qw_m[i][0] for i in range(f.n)],
                                       'w brf': [qw_m[i][1] for i in range(f.n)]}, separate_spacecraft=False)
         d = self.params_vec2dict(params=x_m, separate_spacecraft=False)
+        self.estimation_params_d = d
 
         # Измерения с поправкой на угловой коэффициент усиления G (signal_rate)
         z_ = v.MEASURES_VECTOR
         notes1 = v.MEASURES_VECTOR_NOTES
 
         # Измерения согласно модели
-        z_model, notes3 = measure_antennas_power(c=c, f=f, v=v, p=p, j=j, estimated_params=x_m)
+        z_model, _, notes3 = measure_antennas_power(c=c, f=f, v=v, p=p, j=j, estimated_params=x_m)
         tmp = np.abs(z_model - z_)
         p.record.loc[p.iter, f'ZModel&RealDifference'] = tmp.mean()
         p.record.loc[p.iter, f'ZModel&RealDifference min'] = tmp.min()

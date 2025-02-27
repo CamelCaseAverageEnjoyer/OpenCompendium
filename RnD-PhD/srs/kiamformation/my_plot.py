@@ -20,21 +20,23 @@ def plot_observability_criteria(o):
     x = o.p.record['t'].to_list()
     label_time = {"рус": f"Время, с", "eng": f"Time, s"}[o.v.LANGUAGE]
     labels = {"рус": ["", "", ""],
-              "eng": ["Gramian singular value rate", "Linear rank", "Linear singular value rate"]}[o.v.LANGUAGE]
-    fig, ax = plt.subplots(2, 1, figsize=(7, 7), gridspec_kw={'height_ratios': [3, 1]})
-    for i, s in enumerate(['gramian sigma criteria', 'linear rank criteria']):
-        ax[i].plot(x, o.p.record[s].to_list(), c=o.v.MY_COLORS[i+7], label=labels[i])
+              "eng": ["Linear singular value rate", "Linear rank", "Gramian singular value rate"]}[o.v.LANGUAGE]
+    fig, ax = plt.subplots(2, 1, figsize=(9, 7), gridspec_kw={'height_ratios': [3, 1]})
+    for i, s in enumerate(['linear sigma criteria', 'linear rank criteria']):
+        ax[i].plot(x, o.p.record[s].to_list(), c=o.v.MY_COLORS[i+10], label=labels[i])
         ax[i].grid(True)
         ax[i].set_xlabel(label_time, fontsize=CAPTION_SIZE)
 
     ax2 = ax[0].twinx()  # instantiate a second Axes that shares the same x-axis
-    ax[0].set_ylabel(labels[0], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[0+7])
-    ax2.set_ylabel(labels[2], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[2])
-    ax2.plot(x, o.p.record['linear sigma criteria'].to_list(), c=o.v.MY_COLORS[2])
+    ax[0].set_ylabel(labels[0], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[0+10])
+    ax2.set_ylabel(labels[2], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[4])
+    ax2.plot(x, o.p.record['gramian sigma criteria'].to_list(), c=o.v.MY_COLORS[4])
     # ax2.legend(fontsize=CAPTION_SIZE)
 
     # ax[0].legend(fontsize=CAPTION_SIZE)
     ax[1].legend(fontsize=CAPTION_SIZE)
+    ax[0].set_yscale('log')
+    ax2.set_yscale('log')
     plt.show()
 
 
@@ -56,7 +58,7 @@ def plot_distance(o):
                 if i_f == 0 else [None for _ in range(100)]
             for jj in range(int(o.p.record[f'ZModel&RealDifference N'][1])):
                 y2 = o.p.record[f'ZModel&RealDifference {jj}'].to_list()
-                axes[0].plot(x, y2, c=o.v.MY_COLORS[6], label=labels[0] if i_c == 0 and jj == 0 else None, lw=1)
+                axes[0].plot(x, y2, c=o.v.MY_COLORS[1], label=labels[0] if i_c == 0 and jj == 0 else None, lw=1)
             '''for jj in range(int(o.p.record[f'ZReal N'][1])):
                 y1 = o.p.record[f'ZReal {jj}'].to_list()
                 axes[0].plot(x, y1, c=o.v.MY_COLORS[11], label=labels[1] if i_c == 0 and jj == 0 else None, lw=1, ls="-")
@@ -64,7 +66,7 @@ def plot_distance(o):
                 y1 = o.p.record[f'ZModel {jj}'].to_list()
                 axes[0].plot(x, y1, c=o.v.MY_COLORS[13], label=labels[2] if i_c == 0 and jj == 0 else None, lw=1, ls="-")'''
     axes[0].set_xlabel(label_time, fontsize=CAPTION_SIZE)
-    axes[0].set_ylabel({"рус": f"Ошибка, м", "eng": f"Error, m"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
+    axes[0].set_ylabel({"рус": f"Невязка", "eng": f"Residues"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
     axes[0].legend(fontsize=CAPTION_SIZE)
     axes[0].grid(True)
 
@@ -389,7 +391,7 @@ def plot_reference_frames(ax, o, txt: str, color: str = "gray", t: float = None)
     ax = arrows3d(starts=np.array([start for _ in range(3)]), ends=np.array([start + arrows[i] for i in range(3)]),
                   ax=ax, color=color, label=txt)
     for i in range(3):
-        label = ["x", "y", "z"][i]
+        label = ["x, m", "y, m", "z, m"][i]
         a = start + arrows[i] + arrows[i] / np.linalg.norm(arrows[i]) * 0.2
         ax.text(a[0], a[1], a[2], c=color, s=label)
     return ax
@@ -473,6 +475,9 @@ def plot_all(o, save: bool = False, count: int = None):
                                       f"{' )' if o.v.DYNAMIC_MODEL['aero drag'] or o.v.DYNAMIC_MODEL['j2'] else ''}"
                                       f" | Время: {o.v.TIME} ({round(o.v.TIME / (3600 * 24), 2)} дней)  |  "
                                       f"i={o.v.INCLINATION}°, e={o.v.ECCENTRICITY}"))
+    fig.update_scenes(xaxis_title_text='X, m',
+                      yaxis_title_text='Y, m',
+                      zaxis_title_text='Z, m')
     if save:
         fig.write_image('../../img/' + str('{:04}'.format(count)) + '.jpg')
     else:

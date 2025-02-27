@@ -41,7 +41,6 @@ def cos(a):
     return np.cos(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.cos(a)
 
 def sqrt(a):
-    print(a)
     return np.sqrt(a) if (isinstance(a, np.ndarray) or isinstance(a, int) or isinstance(a, float)) else sympy.sqrt(a)
 
 def tan(a):
