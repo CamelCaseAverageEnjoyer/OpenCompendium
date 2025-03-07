@@ -143,7 +143,7 @@ def get_torque(v: Variables, obj: Apparatus, q, w, t, i):
     U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
     R = A @ R_orb
     # m_grav = np.zeros(3)
-    m_grav = 3*v.MU/np.linalg.norm(R)**5 * cross(R, J @ R)
+    m_grav = 3*v.MU/norm(R)**5 * cross(R, J @ R)
     return inv(J) @ (m_grav - cross(w, J @ w))
 
 def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):

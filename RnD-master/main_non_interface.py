@@ -3,7 +3,7 @@ from all_objects import *
 """КОСТЫЛЬ НА ОБЩИЙ ЦЕНТР МАСС"""
 """КОСТЫЛЬ НА МАССУ КОНТЕЙНЕРА"""
 
-choice = '4'
+choice = '2'
 vedo_picture = True
 vedo_picsave = False
 
@@ -38,7 +38,7 @@ o_global = AllProblemObjects(if_impulse_control=False,
                              dt=1., T_max=5500., u_max=0.2 if choice == '4' else 0.05,
                              a_pid_max=1e-5, k_p=3e-4, freetime=50,
                              choice=choice, floor=2, extrafloor=0, d_crash=0.2, d_to_grab=0.5,
-                             N_apparatus=1, file_reset=True, coordinate_system=['orbital', 'body', 'real'][2])
+                             N_apparatus=1, file_reset=True, coordinate_system=['orbital', 'body', 'real'][0])
 
 o_global.my_print(f"Количество стержней: {o_global.s.n_beams}", mode='c')
 if o_global.choice == '4':
@@ -87,7 +87,7 @@ def iteration_func(o):
             o.t = 2 * o.T_total
     return o
 
-def iteration_timer(eventId=None):
+def iteration_timer(event):
     global o_global, vedo_picture, fig_view, camera
     if o_global.t <= o_global.T_total:
         o_global = iteration_func(o_global)
@@ -106,11 +106,11 @@ if __name__ == "__main__":
     global timerId, fig_view, button, evnetId, camera
     if vedo_picture:
         timerId = 1
-        bg = "hdri/6.hdr" if o_global.coordinate_system == 'real' else 'white'
+        bg = "hdri/6.hdr" if o_global.coordinate_system == 'real' else 'bb'
         fig_view = Plotter(bg='white', size=(1920, 1080))
         button = fig_view.add_button(button_func, states=["Play ", "Pause"], size=20,
                                      font='Bongas', bold=True, pos=[0.98, 0.96])
-        fig_view.timer_callback("destroy", timerId)
+        # fig_view.timer_callback("destroy", timerId)
         evnetId = fig_view.add_callback("timer", iteration_timer)
 
         my_mesh = plot_iterations_new(o_global).color("silver")

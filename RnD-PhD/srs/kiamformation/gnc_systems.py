@@ -44,7 +44,7 @@ class KalmanFilter:
             self.P = [np.diag([self.v.KALMAN_COEF['p'][0]] * 3 + [self.v.KALMAN_COEF['p'][1]] * 3 +
                               [self.v.KALMAN_COEF['p'][2]] * 3 + [self.v.KALMAN_COEF['p'][3]] * 3) for _ in range(f.n)]
             self.Q = np.diag([self.v.KALMAN_COEF['q'][0]] * 3 + [self.v.KALMAN_COEF['q'][1]] * 3)
-        self.Phi = self.get_Phi(w=None, w0=None)
+        self.Phi = self.get_Phi(w=None, w0=None, q=None)
 
         # Расширешние на учёт несколько аппаратов в фильтре
         self.D = block_diag(*[self.D for _ in range(self.f.n)])
@@ -205,7 +205,7 @@ class KalmanFilter:
 
         if if_correction:
             # >>>>>>>>>>>> Этап коррекции <<<<<<<<<<<<
-            self.Phi = self.get_Phi(w=None, w0=None)
+            self.Phi = self.get_Phi(w=None, w0=None, q=None)
             Q_tilda = self.Phi @ self.D @ self.Q @ self.D.T @ self.Phi.T * v.dT_nav
             P_m = self.Phi @ self.P @ self.Phi.T + Q_tilda
             q_f = d['q-3 irf'] if v.NAVIGATION_ANGLES else [f.q[i].vec for i in range(f.n)]
