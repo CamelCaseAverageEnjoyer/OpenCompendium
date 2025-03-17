@@ -17,6 +17,30 @@ def get_c_hkw(r, v, w):
             r[0] - 2*v[2]/w,
             v[1]/w,
             r[1]]
+    #return [2*r[2] + v[0]/w,
+    #        v[2]/w,
+    #        -3*r[2] - 2*v[0]/w,
+    #        r[0] - 2*v[2]/w,
+    #        v[1]/w,
+    #        r[1]]
+
+def get_phi(w, t, return_splitted: bool = False):
+    A = vec_type([[1, 0, -6*(w*t - sin(w*t))],
+                  [0, cos(w*t), 0],
+                  [0, 0, 4 - 3*cos(w*t)]], b=t)
+    B = vec_type([[4/w*sin(w*t) - 3*t, 0, -2/w*(1 - cos(w*t))],
+                  [0, sin(w*t)/w, 0],
+                  [-2/w*(cos(w*t) - 1), 0, sin(w*t)/w]], b=t)
+    C = vec_type([[0, 0, -6*w*(1 - cos(w*t))],
+                  [0, -w*sin(w*t), 0],
+                  [0, 0, -3*w*sin(w*t)]], b=t)
+    D = vec_type([[4*cos(w*t) - 3, 0, -2*sin(w*t)],
+                  [0, cos(w*t), 0],
+                  [-2*sin(w*t), 0, cos(w*t)]], b=t)
+    if return_splitted:
+        return A, B, C, D
+    else:
+        return bmat([[A, B], [C, D]])
 
 def r_hkw(C, w, t):
     """Возвращает радиус-вектор в ОСК в момент времени t"""
@@ -82,12 +106,15 @@ def get_atm_params(v: Variables, h: float, atm_model: str = None) -> tuple:
         rho = rho.value
     return rho, T, p
 
-def get_geopotential_acceleration(vrs: Variables, r, v, w, mu):
+def get_geopotential_acceleration(vrs: Variables, r, v, w, mu=None):
     """Возвращает ускорение КА от притяжения Земли. Внимание! При ('hkw' in _vrs.SOLVER) ускорение в ОСК, иначе ИСК!"""
     if 'hkw' in vrs.SOLVER:
         return vec_type([-2 * w * v[2],
                          -w**2 * r[1],
                          2 * w * v[0] + 3 * w**2 * r[2]])
+        '''return vec_type([3*w**2*r[0] + 2*w*v[1],
+                         -2*w*v[0],
+                         -w**2*r[2]])'''
     return mu * r / norm(r) ** 3
 
 def get_aero_drag_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, rho=None):

@@ -63,9 +63,9 @@ class KalmanFilter:
             return np.array([[0, 0, 0, 1, 0, 0],
                              [0, 0, 0, 0, 1, 0],
                              [0, 0, 0, 0, 0, 1],
-                             [0, 0, 0, 0, 0, -2 * w0],
-                             [0, - w0 ** 2, 0, 0, 0, 0],
-                             [0, 0, 3 * w0 ** 2, 2 * w0, 0, 0]]) * self.v.dT + np.eye(self.j)
+                             [0, 0, 0, 0, 2*w0, 0],
+                             [0, - w0**2, 0, -2*w0, 0, 0],
+                             [0, 0, 3*w0**2, 0, 0, 0]]) * self.v.dT + np.eye(self.j)  # ПОМЕНЯТЬ!!!
         else:  # Оценка орбитального и углового движения
             J = self.f.J
             Wj = inv(J) @ (-get_antisymmetric_matrix(w) @ J + get_antisymmetric_matrix(J @ w))
