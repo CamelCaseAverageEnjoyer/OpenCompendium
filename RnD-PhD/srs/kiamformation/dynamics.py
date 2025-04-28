@@ -1,63 +1,7 @@
 """Функции для моделирования динамики КА
 ПЕРЕДЕЛАТЬ v_->vrs"""
-from datetime import datetime
-
-from primary_info import *
-from gnc_systems import *
-from my_plot import *
-from symbolic import *
-import quaternion
-
-# >>>>>>>>>>>> Задание движения Хилла-Клохесси-Уилтшира <<<<<<<<<<<<
-def get_c_hkw(r, v, w):
-    """Возвращает константы C[0]..C[5] движения Хилла-Клохесси-Уилтштира"""
-    return [2*r[2] + v[0]/w,
-            v[2]/w,
-            -3*r[2] - 2*v[0]/w,
-            r[0] - 2*v[2]/w,
-            v[1]/w,
-            r[1]]
-    #return [2*r[2] + v[0]/w,
-    #        v[2]/w,
-    #        -3*r[2] - 2*v[0]/w,
-    #        r[0] - 2*v[2]/w,
-    #        v[1]/w,
-    #        r[1]]
-
-def get_phi(w, t, return_splitted: bool = False):
-    A = vec_type([[1, 0, -6*(w*t - sin(w*t))],
-                  [0, cos(w*t), 0],
-                  [0, 0, 4 - 3*cos(w*t)]], b=t)
-    B = vec_type([[4/w*sin(w*t) - 3*t, 0, -2/w*(1 - cos(w*t))],
-                  [0, sin(w*t)/w, 0],
-                  [-2/w*(cos(w*t) - 1), 0, sin(w*t)/w]], b=t)
-    C = vec_type([[0, 0, -6*w*(1 - cos(w*t))],
-                  [0, -w*sin(w*t), 0],
-                  [0, 0, -3*w*sin(w*t)]], b=t)
-    D = vec_type([[4*cos(w*t) - 3, 0, -2*sin(w*t)],
-                  [0, cos(w*t), 0],
-                  [-2*sin(w*t), 0, cos(w*t)]], b=t)
-    if return_splitted:
-        return A, B, C, D
-    else:
-        return bmat([[A, B], [C, D]])
-
-def r_hkw(C, w, t):
-    """Возвращает радиус-вектор в ОСК в момент времени t"""
-    return vec_type([-3 * C[0] * w * t + 2 * C[1] * cos(w * t) - 2 * C[2] * sin(w * t) + C[3],
-                     C[5] * cos(w * t) + C[4] * sin(w * t),
-                     2 * C[0] + C[2] * cos(w * t) + C[1] * sin(w * t)])
-
-def v_hkw(C, w, t):
-    """Возвращает вектор скоростей в ОСК в момент времени t"""
-    return vec_type([-3 * C[0] * w - 2 * w * C[1] * sin(w * t) - 2 * w * C[2] * cos(w * t),
-                     w * C[4] * cos(w * t) - w * C[5] * sin(w * t),
-                     w * C[2] * sin(w * t) + w * C[1] * cos(w * t)])
-
-def get_rand_c(v: Variables) -> list:
-    """(quaternion or quaternion_but_i_dont_give_a_fuck)"""  # Чего? Что это значит?
-    return get_c_hkw(r=v.spread(param='r', name='FemtoSat'),
-                     v=v.spread(param='v', name='FemtoSat'), w=v.W_ORB)
+from config import Variables
+from cosmetic import my_print
 
 # >>>>>>>>>>>> Поступательное движение, интегрирование <<<<<<<<<<<<
 def get_atm_params(v: Variables, h: float, atm_model: str = None) -> tuple:
@@ -68,6 +12,7 @@ def get_atm_params(v: Variables, h: float, atm_model: str = None) -> tuple:
     :param h: Высота
     :param atm_model: Модель атмосферы (необязательный параметр)
     :return: (ρ, T, P): плотность, температура, давление (Внимание! Для ПНБО (ρ, None, None)"""
+    import numpy as np
     atm_model = v.ATMOSPHERE_MODEL if atm_model is None else atm_model
     rho, T, p = None, None, None
     if atm_model == 'NASA':
@@ -108,28 +53,28 @@ def get_atm_params(v: Variables, h: float, atm_model: str = None) -> tuple:
 
 def get_geopotential_acceleration(vrs: Variables, r, v, w, mu=None):
     """Возвращает ускорение КА от притяжения Земли. Внимание! При ('hkw' in _vrs.SOLVER) ускорение в ОСК, иначе ИСК!"""
+    from flexmath import setvectype, norm
     if 'hkw' in vrs.SOLVER:
-        return vec_type([-2 * w * v[2],
-                         -w**2 * r[1],
-                         2 * w * v[0] + 3 * w**2 * r[2]])
-        '''return vec_type([3*w**2*r[0] + 2*w*v[1],
-                         -2*w*v[0],
-                         -w**2*r[2]])'''
+        return setvectype([-2*w*v[2],
+                           -w**2*r[1],
+                           3*w**2*r[2] + 2*w*v[0]])
     return mu * r / norm(r) ** 3
 
-def get_aero_drag_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, rho=None):
+def get_aero_drag_acceleration(vrs: Variables, obj, i: int, r, v, rho=None):
     """Возвращает ускорение КА от сопротивления атмосферы.
     Внимание! При параметре vrs.SOLVER='hkw' возвращает ускорение в ОСК, иначе в ИСК!"""
+    from my_math import quart2dcm, matrix2angle
+    from flexmath import setvectype, norm
     S = quart2dcm(obj.q[i])
     cos_alpha = matrix2angle(S) if obj.name == "FemtoSat" else 1
 
     if 'hkw' in vrs.SOLVER:
-        v_real = v + vec_type([vrs.V_ORB, 0, 0])
+        v_real = v + setvectype([vrs.V_ORB, 0, 0])
         rho = get_atm_params(v=vrs, h=r[2] + vrs.HEIGHT)[0] if rho is None else rho
         vrs.RHO = rho
         return - v_real * norm(v_real) * obj.get_blown_surface(cos_alpha) * rho / obj.mass
 
-def get_full_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, w=None, mu=None, rho=None):
+def get_full_acceleration(vrs: Variables, obj, i: int, r, v, w=None, mu=None, rho=None):
     """Возвращает вектор силы в ОСК, принимает параметры в ОСК"""
     w = vrs.W_ORB if w is None else w
     mu = vrs.MU if mu is None else mu
@@ -139,15 +84,17 @@ def get_full_acceleration(vrs: Variables, obj: Apparatus, i: int, r, v, w=None, 
             force += get_aero_drag_acceleration(vrs=vrs, r=r, v=v, obj=obj, i=i, rho=rho)
         return force
 
-def translate_rhs(vrs: Variables, obj: Apparatus, i: int, rv, w=None, mu=None, rho=None):
+def translate_rhs(vrs: Variables, obj, i: int, rv, w=None, mu=None, rho=None):
     """При численном моделировании rv передаётся 1 numpy.ndarray, иначе rv типа tuple"""
+    from flexmath import append
     r, v = rv if isinstance(rv, tuple) else (rv[[0, 1, 2]], rv[[3, 4, 5]])
     dr = v
     dv = get_full_acceleration(vrs=vrs, obj=obj, i=i, r=r, v=v, w=w, mu=mu, rho=rho)
     return (dr, dv) if isinstance(rv, tuple) else append(dr, dv)
 
-def rk4_translate(v_: Variables, obj: Union[CubeSat, FemtoSat], i: int, dt: float = None, r=None, v=None) -> tuple:
+def rk4_translate(v_: Variables, obj, i: int, dt: float = None, r=None, v=None) -> tuple:
     """Функция работает только с численными переменными"""
+    import numpy as np
     dt = v_.dT if dt is None else dt
     r = obj.r_orf[i] if r is None else r
     v = obj.v_orf[i] if v is None else v
@@ -162,43 +109,60 @@ def rk4_translate(v_: Variables, obj: Union[CubeSat, FemtoSat], i: int, dt: floa
 
 
 # >>>>>>>>>>>> Вращательное движение, интегрирование <<<<<<<<<<<<
-def get_torque(v: Variables, obj: Apparatus, q, w, t, i):
+def get_torque(v: Variables, obj, q, w, t, i):
     """Вектор внешнего углового ускорения"""
+    from flexmath import norm, cross, inv
     q = obj.q if q is None else q
     w = obj.w_brf if w is None else w
     J = obj.J
-    U, S, A, R_orb = get_matrices(v=v, t=t, obj=obj, n=i)
+    U, S, A, R_orb = get_matrices(vrs=v, t=t, obj=obj, n=i, q=q)
     R = A @ R_orb
     # m_grav = np.zeros(3)
     m_grav = 3*v.MU/norm(R)**5 * cross(R, J @ R)
     return inv(J) @ (m_grav - cross(w, J @ w))
 
-def attitude_rhs(v: Variables, obj: Apparatus, t: float, i: int, qw):
+def attitude_rhs(vrs: Variables, obj, t: float, i: int, qw):
     """При численном моделировании qw передаётся 1 numpy.ndarray;
     При символьном вычислении qw должен быть типа tuple"""
-    q, w = qw if isinstance(qw, tuple) else (np.quaternion(*qw[[0, 1, 2, 3]]), qw[[4, 5, 6]])
+    from flexmath import quat, float2rational
+    from my_math import q_dot
+    import numpy as np
+    from sympy import Rational
+    # q, w = qw if isinstance(qw, tuple) else (np.quaternion(*qw[[0, 1, 2, 3]]), qw[[4, 5, 6]])
+    q, w = qw if isinstance(qw, tuple) else (quat(qw[[0, 1, 2, 3]]), qw[[4, 5, 6]])
+
+    # if isinstance(q, np.quaternion):
+    #     dq = 1 / 2 * q_dot(q, quat(w))
+    # else:
+    #     dq = Rational(1, 2) * q_dot(q, quat(w))
     dq = 1 / 2 * q_dot(quat(w), q)
-    dw = get_torque(v=v, obj=obj, q=q, w=w, t=t, i=i)
+    dq = float2rational(dq, (1, 2))
+
+    dw = get_torque(v=vrs, obj=obj, q=q, w=w, t=t, i=i)
     return (dq, dw) if isinstance(qw, tuple) else np.append(dq.components, dw)
 
-def rk4_attitude(v_: Variables, obj: Union[CubeSat, FemtoSat], t: float, i: int, dt: float = None, q=None, w=None):
+def rk4_attitude(vrs: Variables, obj, t: float, i: int, dt: float = None, q=None, w=None):
     """Функция работает только с численными переменными.
     Если принял на вход q-3, возвращает q-3; аналогично q-4"""
-    dt = v_.dT if dt is None else dt
+    import numpy as np
+    import quaternion
+    from my_math import vec2quat
+
+    dt = vrs.dT if dt is None else dt
     q = obj.q[i] if q is None else q
     w = obj.w_brf[i] if w is None else w
 
     q4 = q if isinstance(q, np.quaternion) else vec2quat(q)
 
     qw = np.append(quaternion.as_float_array(q4), w)
-    k1 = attitude_rhs(v=v_, obj=obj, t=t, i=i, qw=qw)
-    k2 = attitude_rhs(v=v_, obj=obj, t=t, i=i, qw=qw + k1 * dt / 2)
-    k3 = attitude_rhs(v=v_, obj=obj, t=t, i=i, qw=qw + k2 * dt / 2)
-    k4 = attitude_rhs(v=v_, obj=obj, t=t, i=i, qw=qw + k3 * dt)
+    k1 = attitude_rhs(vrs=vrs, obj=obj, t=t, i=i, qw=qw)
+    k2 = attitude_rhs(vrs=vrs, obj=obj, t=t, i=i, qw=qw + k1 * dt / 2)
+    k3 = attitude_rhs(vrs=vrs, obj=obj, t=t, i=i, qw=qw + k2 * dt / 2)
+    k4 = attitude_rhs(vrs=vrs, obj=obj, t=t, i=i, qw=qw + k3 * dt)
     qw = dt / 6 * (k1 + 2*k2 + 2*k3 + k4)
 
-    w_anw = w + qw[[4, 5, 6]]
-    q_anw = (q4 + np.quaternion(*qw[[0, 1, 2, 3]])).normalized()
+    w_anw = w + qw[4:7]  # qw[[4, 5, 6]]
+    q_anw = (q4 + np.quaternion(*qw[0:4])).normalized()  # qw[[0, 1, 2, 3]]
 
     if q_anw.w < 0:
         q_anw *= -1
@@ -207,60 +171,69 @@ def rk4_attitude(v_: Variables, obj: Union[CubeSat, FemtoSat], t: float, i: int,
 
 
 # >>>>>>>>>>>> Перевод между системами координат <<<<<<<<<<<<
-def get_matrices(v: Variables, t, obj: Apparatus = None, n: int = None, first_init: bool = False, q=None):
+def get_matrices(vrs: Variables, t, obj=None, n: int = None, first_init: bool = False, q=None):
     """Функция возвращает матрицы поворота.
     Инициализируется в dymancis.py, используется в spacecrafts, dynamics"""
+    from flexmath import arctan, sqrt, setvectype, sin, cos, tan, cross, norm
+    from my_math import quart2dcm, vec2unit
+    from sympy import Matrix
     q = obj.q[n] if q is None else q
-    E = t * v.W_ORB  # Эксцентрическая аномалия
-    if v.ECCENTRICITY == 0:
+    E = t * vrs.W_ORB  # Эксцентрическая аномалия
+    if vrs.ECCENTRICITY == 0:
         f = E
     else:
-        f = 2 * arctan(sqrt((1 + v.ECCENTRICITY) / (1 - v.ECCENTRICITY)) * tan(E / 2))  # Истинная аномалия
+        f = 2 * arctan(sqrt((1 + vrs.ECCENTRICITY) / (1 - vrs.ECCENTRICITY)) * tan(E / 2))  # Истинная аномалия
     A = quart2dcm(q)
-    if 'hkw' in v.SOLVER or first_init:
-        U = vec_type([[0, 1, 0],  # Поворот к экваториальной плоскости
-                      [0, 0, 1],
-                      [1, 0, 0]]) @ \
-            vec_type([[cos(f), sin(f), 0],  # Разница между истинной аномалией и местной
-                      [-sin(f), cos(f), 0],
-                      [0, 0, 1]]) @ \
-            vec_type([[1, 0, 0],  # Поворот к плоскости орбиты
-                      [0, cos(v.INCLINATION), sin(v.INCLINATION)],
-                      [0, -sin(v.INCLINATION), cos(v.INCLINATION)]])
-        translation = v.P / (1 + v.ECCENTRICITY * cos(f))
+    if 'hkw' in vrs.SOLVER or first_init:
+        U = setvectype([[0, 1, 0],  # Поворот к экваториальной плоскости
+                        [0, 0, 1],
+                        [1, 0, 0]]) @ \
+            setvectype([[cos(f), sin(f), 0],  # Разница между истинной аномалией и местной
+                        [-sin(f), cos(f), 0],
+                        [0, 0, 1]]) @ \
+            setvectype([[1, 0, 0],  # Поворот к плоскости орбиты
+                        [0, cos(vrs.INCLINATION), sin(vrs.INCLINATION)],
+                        [0, -sin(vrs.INCLINATION), cos(vrs.INCLINATION)]])
+        translation = vrs.P / (1 + vrs.ECCENTRICITY * cos(f))
     else:
-        e_z = vec2unit(v.ANCHOR.r_irf[0])
-        e_x = vec2unit(v.ANCHOR.v_irf[0])
-        e_y = vec2unit(my_cross(e_z, e_x))
-        e_x = vec2unit(my_cross(e_y, e_z))
-        U = vec_type([e_x, e_y, e_z])
-        translation = norm(v.ANCHOR.r_irf[0])
+        e_z = vec2unit(vrs.ANCHOR.r_irf[0])
+        e_x = vec2unit(vrs.ANCHOR.v_irf[0])
+        e_y = vec2unit(cross(e_z, e_x))
+        e_x = vec2unit(cross(e_y, e_z))
+        U = setvectype([e_x, e_y, e_z])
+        translation = norm(vrs.ANCHOR.r_irf[0])
+    if isinstance(A, Matrix):
+        U.simplify()
     S = A @ U.T
-    R_orb = U.T @ vec_type([0, 0, translation])
+    if isinstance(A, Matrix):
+        S.simplify()
+    R_orb = U.T @ setvectype([0, 0, translation])
     return U, S, A, R_orb
 
-def i_o(a, v: Variables, U, vec_type: str):
+def i_o(a, vrs: Variables, U, vec_type: str):
     """Инерциальная -> Орбитальная"""
+    from flexmath import get_same_type_conversion
     t = get_same_type_conversion(a)
     if len(a.shape) == 1 and vec_type == "r":
-        return U @ a - t([0, 0, v.ORBIT_RADIUS])
+        return U @ a - t([0, 0, vrs.ORBIT_RADIUS])
     if len(a.shape) == 1 and vec_type == "v":
-        return U @ a - t([v.V_ORB, 0, 0])
+        return U @ a - t([vrs.V_ORB, 0, 0])
     if len(a.shape) == 1 and vec_type == "w":
-        return U @ (a - v.W_ORB_VEC_IRF)
+        return U @ (a - vrs.W_ORB_VEC_IRF)
     if len(a.shape) == 2:
         return U @ a @ U.T
     raise ValueError(f"Необходимо подать вектор или матрицу! Тип вектора {vec_type} должен быть из [r, v, w]")
 
-def o_i(a, v: Variables, U, vec_type: str):
+def o_i(a, vrs: Variables, U, vec_type: str):
     """Орбитальная -> Инерциальная"""
+    from flexmath import get_same_type_conversion
     t = get_same_type_conversion(a)
     if len(a.shape) == 1 and vec_type == "r":
-        return U.T @ (a + t([0, 0, v.ORBIT_RADIUS]))
+        return U.T @ (a + t([0, 0, vrs.ORBIT_RADIUS]))
     if len(a.shape) == 1 and vec_type == "v":
-        return U.T @ (a + t([v.V_ORB, 0, 0]))
+        return U.T @ (a + t([vrs.V_ORB, 0, 0]))
     if len(a.shape) == 1 and vec_type == "w":
-        return U.T @ a + v.W_ORB_VEC_IRF
+        return U.T @ a + vrs.W_ORB_VEC_IRF
     if len(a.shape) == 2:
         return U.T @ a @ U
     raise ValueError(f"Необходимо подать вектор или матрицу! Тип вектора {vec_type} должен быть из [r, v, w]")
@@ -268,8 +241,11 @@ def o_i(a, v: Variables, U, vec_type: str):
 
 # >>>>>>>>>>>> Класс динамики кубсатов и чипсатов <<<<<<<<<<<<
 class PhysicModel:
+    from spacecrafts import FemtoSat, CubeSat, Anchor
+
     def __init__(self, f: FemtoSat, c: CubeSat, a: Anchor, v: Variables):
         from pandas import DataFrame
+        from gnc_systems import KalmanFilter
 
         # Неизменные параметры
         self.t = 0.
@@ -294,6 +270,7 @@ class PhysicModel:
         self.record = DataFrame()
 
     def kiam_init(self):
+        import numpy as np
         from kiam_astro import kiam
         from kiam_astro.trajectory import Trajectory
         self.jd0 = kiam.juliandate(2024, 1, 1, 0, 0, 0)  # (год, месяц, день, чч, мм, сс)
@@ -322,28 +299,27 @@ class PhysicModel:
 
     # Шаг по времени
     def time_step(self):
+        import numpy as np
+        from gnc_systems import navigate, guidance
+        from primary_info import measure_antennas_power, measure_magnetic_field
+
         self.iter += 1
         self.t += self.v.dT
 
         # Движение системы
         for j, obj in enumerate(self.spacecrafts_all):
             for i in range(obj.n):
-                U, _, A, _ = get_matrices(v=self.v, t=self.t, obj=obj, n=i)
+                U, _, A, _ = get_matrices(vrs=self.v, t=self.t, obj=obj, n=i)
 
                 # Вращательное движение
-                if obj != self.a:  # and self.v.GAIN_MODEL_C_N + self.v.GAIN_MODEL_F_N > 0:
-                    obj.q[i], obj.w_brf[i] = rk4_attitude(v_=self.v, obj=obj, i=i, t=self.t)
+                if obj != self.a:
+                    obj.q[i], obj.w_brf[i] = rk4_attitude(vrs=self.v, obj=obj, i=i, t=self.t)
 
                 # Поступательное движение
                 if 'rk4' in self.v.SOLVER:
-                    if np.any(list(self.v.DYNAMIC_MODEL.values())):  # Если J2 или aero drag
-                        obj.r_orf[i], obj.v_orf[i] = rk4_translate(v_=self.v, obj=obj, i=i)
-                    else:
-                        obj.r_orf[i] = r_hkw(obj.c_hkw[i], self.v.W_ORB, self.t)
-                        obj.v_orf[i] = v_hkw(obj.c_hkw[i], self.v.W_ORB, self.t)
-
-                    obj.r_irf[i] = o_i(v=self.v, a=obj.r_orf[i], U=U, vec_type='r')
-                    obj.v_irf[i] = o_i(v=self.v, a=obj.v_orf[i], U=U, vec_type='v')
+                    obj.r_orf[i], obj.v_orf[i] = rk4_translate(v_=self.v, obj=obj, i=i)
+                    obj.r_irf[i] = o_i(vrs=self.v, a=obj.r_orf[i], U=U, vec_type='r')
+                    obj.v_irf[i] = o_i(vrs=self.v, a=obj.v_orf[i], U=U, vec_type='v')
                 elif 'kiamastro' in self.v.SOLVER:
                     from kiam_astro import kiam
                     obj.r_irf[i] = np.array([self.tr[j][i].states[ii][self.iter - 1]
@@ -351,20 +327,20 @@ class PhysicModel:
                     obj.v_irf[i] = np.array([self.tr[j][i].states[ii + 3][self.iter - 1]
                                              for ii in range(3)]) * kiam.units('earth')['VelUnit'] * 1e3
                     tr_time = self.tr[j][i].times[self.iter-1] * self.v.SEC_IN_RAD
-                    U, _, _, _ = get_matrices(v=self.v, t=tr_time, obj=obj, n=i)
-                    obj.r_orf[i] = i_o(v=self.v, a=obj.r_irf[i], U=U, vec_type='r')
-                    obj.v_orf[i] = i_o(v=self.v, a=obj.v_irf[i], U=U, vec_type='v')
+                    U, _, _, _ = get_matrices(vrs=self.v, t=tr_time, obj=obj, n=i)
+                    obj.r_orf[i] = i_o(vrs=self.v, a=obj.r_irf[i], U=U, vec_type='r')
+                    obj.v_orf[i] = i_o(vrs=self.v, a=obj.v_irf[i], U=U, vec_type='v')
                 else:
                     raise ValueError(f"Solver is to be changed! {self.v.SOLVER} not in {self.v.SOLVERS}")
 
-                U, _, A, _ = get_matrices(v=self.v, t=self.t, obj=obj, n=i)
+                U, _, A, _ = get_matrices(vrs=self.v, t=self.t, obj=obj, n=i)
                 obj.w_irf[i] = A.T @ obj.w_brf[i]
-                obj.w_orf[i] = i_o(v=self.v, a=obj.w_irf[i], U=U, vec_type='w')
+                obj.w_orf[i] = i_o(vrs=self.v, a=obj.w_irf[i], U=U, vec_type='w')
 
         # Комплекс первичной информации
         noise = np.sqrt(self.v.KALMAN_COEF['r'])
-        measure_antennas_power(c=self.c, f=self.f, v=self.v, noise=noise, produce=True, p=self, estimated_params=[])
-        measure_magnetic_field(c=self.c, f=self.f, v=self.v, noise=noise)
+        measure_antennas_power(c=self.c, f=self.f, vrs=self.v, noise=noise, produce=True, p=self, estimated_params=[])
+        measure_magnetic_field(c=self.c, f=self.f, vrs=self.v, noise=noise)
 
         # Изменение режимов работы
         guidance(v=self.v, c=self.c, f=self.f, earth_turn=self.t * self.v.W_ORB / 2 / np.pi)
@@ -372,12 +348,14 @@ class PhysicModel:
         # Навигация чипсатов
         if self.v.IF_NAVIGATION:
             navigate(k=self.k, if_correction=self.time2nav <= 0.)
-            self.time2nav = self.v.dT_nav - self.v.dT if self.time2nav <= 0 else self.time2nav - self.v.dT
+            self.time2nav = self.v.dT - self.v.dT if self.time2nav <= 0 else self.time2nav - self.v.dT
 
         # Запись параметров
         self.do_report()
 
     def do_report(self):
+        import numpy as np
+
         i_t = self.iter
         d = self.record
         d.loc[i_t, f'i'] = self.iter
@@ -409,11 +387,11 @@ class PhysicModel:
 
                     w_orf, w_orf_estimation = [], []  # Чтобы PyCharm не ругался
                     if self.v.NAVIGATION_ANGLES:
-                        U, _, A, _ = get_matrices(v=self.v, t=self.t, obj=obj, n=i_n)
+                        U, _, A, _ = get_matrices(vrs=self.v, t=self.t, obj=obj, n=i_n)
                         w_irf = A.T @ w_brf
-                        w_orf = i_o(a=w_irf, v=self.v, vec_type='w', U=U)
+                        w_orf = i_o(a=w_irf, vrs=self.v, vec_type='w', U=U)
                         w_irf_estimation = A.T @ w_brf_estimation
-                        w_orf_estimation = i_o(a=w_irf_estimation, v=self.v, vec_type='w', U=U)
+                        w_orf_estimation = i_o(a=w_irf_estimation, vrs=self.v, vec_type='w', U=U)
 
                     d.loc[i_t, f'{obj.name} KalmanPosEstimation r {i_n}'] = np.linalg.norm(r_orf_estimation)
                     d.loc[i_t, f'{obj.name} KalmanPosError r {i_n}'] = np.linalg.norm(r_orf_estimation - r_orf)

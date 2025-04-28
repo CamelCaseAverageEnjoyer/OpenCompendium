@@ -1,10 +1,10 @@
 """Здесь много всего так-то"""
-import matplotlib.pyplot as plt
-import time
-
-from config import *
+from config import Objects
+from cosmetic import my_print
 
 def timer(func):
+    import time
+
     def wrapper_timer(*args, **kwargs):
         start_time = time.perf_counter()
         value = func(*args, **kwargs)
@@ -25,6 +25,9 @@ def load_simulation_trajectories(o: Objects, text: str):
 
 
 def find_close_solution(o: Objects):
+    import matplotlib.pyplot as plt
+    import numpy as np
+
     o.v.IF_NAVIGATION = False
     o.v.IF_ANY_PRINT = False
     qf = o.f.q
@@ -63,6 +66,8 @@ def find_close_solution(o: Objects):
 
 
 def solve_minimization_new(o: Objects, config_choose_n: int):
+    import matplotlib.pyplot as plt
+    import numpy as np
     from scipy.optimize import minimize
     global o_rand, measure_lst
     t = o.p.record['t'].to_numpy()

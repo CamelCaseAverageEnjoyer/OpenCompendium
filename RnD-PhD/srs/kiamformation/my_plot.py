@@ -1,10 +1,7 @@
-from PIL import Image
-import plotly.graph_objs as go
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-from matplotlib.patches import FancyArrowPatch
-from mpl_toolkits.mplot3d import proj3d
-from config import *
+from config import Variables, Objects
+from cosmetic import my_print
 
 
 FEMTO_RATE = 1  # 5e2
@@ -17,34 +14,57 @@ rcParams["savefig.format"] = "jpg"
 # >>>>>>>>>>>> 2D графики <<<<<<<<<<<<
 def plot_observability_criteria(o):
     global TITLE_SIZE, CAPTION_SIZE
-    x = o.p.record['t'].to_list()
-    label_time = {"рус": f"Время, с", "eng": f"Time, s"}[o.v.LANGUAGE]
-    labels = {"рус": ["", "", ""],
-              "eng": ["Linear singular value rate", "Linear rank", "Gramian singular value rate"]}[o.v.LANGUAGE]
-    fig, ax = plt.subplots(2, 1, figsize=(9, 7), gridspec_kw={'height_ratios': [3, 1]})
-    for i, s in enumerate(['linear sigma criteria', 'linear rank criteria']):
-        ax[i].plot(x, o.p.record[s].to_list(), c=o.v.MY_COLORS[i+10], label=labels[i])
-        ax[i].grid(True)
-        ax[i].set_xlabel(label_time, fontsize=CAPTION_SIZE)
+    if 'linear sigma criteria' in o.p.record.keys():
+        x = o.p.record['t'].to_list()
+        label_time = {"рус": f"Время, с", "eng": f"Time, s"}[o.v.LANGUAGE]
+        labels = {"рус": ["", "", ""],
+                  "eng": ["Linear singular values ratio σᴸ", "Linear rank",
+                          "Gramian singular values ratio σᵂ"]}[o.v.LANGUAGE]
+        fig, ax = plt.subplots(1, 1, figsize=(8, 5))  # , gridspec_kw={'height_ratios': [3, 1]})
+        for i, s in enumerate(['linear sigma criteria']):  # , 'linear rank criteria'
+            ax.plot(x, o.p.record[s].to_list(), c='blue', label=labels[i])
+            ax.grid(True)
+            ax.set_xlabel(label_time, fontsize=CAPTION_SIZE)
 
-    ax2 = ax[0].twinx()  # instantiate a second Axes that shares the same x-axis
-    ax[0].set_ylabel(labels[0], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[0+10])
-    ax2.set_ylabel(labels[2], fontsize=CAPTION_SIZE).set_color(o.v.MY_COLORS[4])
-    ax2.plot(x, o.p.record['gramian sigma criteria'].to_list(), c=o.v.MY_COLORS[4])
-    # ax2.legend(fontsize=CAPTION_SIZE)
+        ax2 = ax.twinx()  # instantiate a second Axes that shares the same x-axis
+        ax.set_ylabel(labels[0], fontsize=CAPTION_SIZE).set_color('blue')
+        ax2.set_ylabel(labels[2], fontsize=CAPTION_SIZE).set_color('red')
+        ax2.plot(x, o.p.record['gramian sigma criteria'].to_list(), c='red')
 
-    # ax[0].legend(fontsize=CAPTION_SIZE)
-    ax[1].legend(fontsize=CAPTION_SIZE)
-    ax[0].set_yscale('log')
-    ax2.set_yscale('log')
-    plt.show()
+        # ax[0].legend(fontsize=CAPTION_SIZE)
+        # ax[1].legend(fontsize=CAPTION_SIZE)
+        ax.set_yscale('log')
+        ax2.set_yscale('log')
+        plt.show()
+
+        '''fig, ax = plt.subplots(1, 1, figsize=(8, 5)) # , gridspec_kw={'height_ratios': [3, 1]})
+        ax.plot(x, o.p.record[f"{o.f.name} q 0 irf 0"].to_list(), label="????", color='k')
+        ax.plot(x, o.p.record[f"{o.f.name} q x irf 0"].to_list(), label="????")
+        ax.plot(x, o.p.record[f"{o.f.name} q y irf 0"].to_list(), label="????")
+        ax.plot(x, o.p.record[f"{o.f.name} q z irf 0"].to_list(), label="????")
+        ax.legend(fontsize=CAPTION_SIZE)
+        ax.grid(True)
+        ax.set_xlabel(label_time, fontsize=CAPTION_SIZE)
+        ax.set_ylabel("Quaternion components", fontsize=CAPTION_SIZE)
+        plt.show()
+            
+        fig, ax = plt.subplots(1, 1, figsize=(8, 5)) # , gridspec_kw={'height_ratios': [3, 1]})
+        ax.plot(x, o.p.record[f"{o.f.name} w x orf 0"].to_list(), label="????")
+        ax.plot(x, o.p.record[f"{o.f.name} w y orf 0"].to_list(), label="????")
+        ax.plot(x, o.p.record[f"{o.f.name} w z orf 0"].to_list(), label="????")
+        ax.legend(fontsize=CAPTION_SIZE)
+        ax.grid(True)
+        ax.set_xlabel(label_time, fontsize=CAPTION_SIZE)
+        ax.set_ylabel("Angular velocity, rad/s", fontsize=CAPTION_SIZE)
+        plt.show()'''
 
 
 def plot_distance(o):
     global TITLE_SIZE, CAPTION_SIZE
 
-    fig, ax = plt.subplots(2 if o.v.NAVIGATION_ANGLES else 2,
-                           2 if o.v.NAVIGATION_ANGLES else 1, figsize=(20 if o.v.NAVIGATION_ANGLES else 8, 10))
+    fig, ax = plt.subplots(2 if o.v.NAVIGATION_ANGLES else 1,
+                           2 if o.v.NAVIGATION_ANGLES else 2,
+                           figsize=(12, 20 if o.v.NAVIGATION_ANGLES else 5))
     axes = ax[0] if o.v.NAVIGATION_ANGLES else ax
     title = {"рус": f"Неточности в навигации", "eng": f"Navigation Errors"}[o.v.LANGUAGE]
     label_time = {"рус": f"Время, с", "eng": f"Time, s"}[o.v.LANGUAGE]
@@ -66,7 +86,7 @@ def plot_distance(o):
                 y1 = o.p.record[f'ZModel {jj}'].to_list()
                 axes[0].plot(x, y1, c=o.v.MY_COLORS[13], label=labels[2] if i_c == 0 and jj == 0 else None, lw=1, ls="-")'''
     axes[0].set_xlabel(label_time, fontsize=CAPTION_SIZE)
-    axes[0].set_ylabel({"рус": f"Невязка", "eng": f"Residues"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
+    axes[0].set_ylabel({"рус": f"Невязка", "eng": f"Residuals"}[o.v.LANGUAGE], fontsize=CAPTION_SIZE)
     axes[0].legend(fontsize=CAPTION_SIZE)
     axes[0].grid(True)
 
@@ -112,8 +132,9 @@ def plot_distance(o):
 
 def plot_atmosphere_models(n: int = 100):
     from dynamics import get_atm_params
-    v = Variables()
+    import numpy as np
 
+    v = Variables()
     range_km = [300, 500]
     fig, axs = plt.subplots(1, 2, figsize=(19, 5))
     fig.suptitle('Модели атмосферы')
@@ -146,15 +167,18 @@ def show_chipsat(o, j, clr, opacity, reference_frame: str, return_go: bool = Tru
     :param xyz: Размеры КА
     :return:
     """
+    import plotly.graph_objs as go
     from dynamics import get_matrices
+    import numpy as np
     global FEMTO_RATE
+
     rate = FEMTO_RATE if reference_frame != "BRF" else 2 / min(o.f.size)
     x, y, z = ([], [], [0 for _ in range(4)])
     for x_shift in [-o.f.size[0] * rate, o.f.size[0] * rate]:
         for y_shift in [-o.f.size[1] * rate, o.f.size[1] * rate]:
             x += [x_shift]
             y += [y_shift]
-    U, S, A, _ = get_matrices(v=o.v, t=o.p.t, obj=o.f, n=j)
+    U, S, A, _ = get_matrices(vrs=o.v, t=o.p.t, obj=o.f, n=j)
 
     if reference_frame != "BRF":
         for i in range(4):
@@ -181,9 +205,11 @@ def show_chipsat(o, j, clr, opacity, reference_frame: str, return_go: bool = Tru
             [z[0], z[2], z[3], z[1], z[0]], c='gray', linewidth=3)
 
 def show_cubesat(o, j, reference_frame: str, xyz=None) -> list:
-    # from dynamics import get_matrices
+    import plotly.graph_objs as go
+    import numpy as np
     from my_math import quart2dcm
     global CUBE_RATE
+
     n_legs = 4
     total_cubes = 6 * (n_legs + 1)
     r = [[[] for _ in range(total_cubes)] for _ in range(3)]
@@ -256,8 +282,10 @@ def show_cubesat(o, j, reference_frame: str, xyz=None) -> list:
     return anw
 
 def plot_model_gain(o: Objects, n: int = 20):
+    import numpy as np
     from my_math import pol2dec
     from spacecrafts import get_gain
+
     fig = plt.figure(figsize=(15, 10))
 
     for i in range(2):
@@ -271,9 +299,9 @@ def plot_model_gain(o: Objects, n: int = 20):
             U, V = np.meshgrid(u, v)
 
             max_g = 0
-            for k in range(len(get_gain(v=o.v, obj=obj, r=pol2dec(1, u[0], v[0]), if_send=j == 0, if_take=j == 1))):
-                g = np.array([[get_gain(v=o.v, obj=obj, r=pol2dec(1, u[ii], v[jj]),
-                                           if_send=j == 0, if_take=j == 1)[k] for ii in range(n)] for jj in range(n)])
+            for k in range(len(get_gain(vrs=o.v, obj=obj, r=pol2dec(1, u[0], v[0])))):
+                g = np.array([[get_gain(vrs=o.v, obj=obj, r=pol2dec(1, u[ii], v[jj]))[k]
+                               for ii in range(n)] for jj in range(n)])
                 X, Y, Z = pol2dec(g, U, V)
                 ax.plot_surface(X, Y, Z, cmap=o.v.MY_COLORMAPS[k])
                 max_g = max(max_g, np.max(g.flatten()))
@@ -294,7 +322,7 @@ def plot_model_gain(o: Objects, n: int = 20):
 
 
 # >>>>>>>>>>>> 3D отображение в ИСК <<<<<<<<<<<<
-def arrows3d(ends: np.ndarray, starts: np.ndarray = None, ax=None, label: str = None, **kwargs):
+def arrows3d(ends, starts=None, ax=None, label: str = None, **kwargs):
     """Построение 3D стрелок
     GitHub: https://github.com/matplotlib/matplotlib/issues/22571
     :param ends: (N, 3) size array of arrow end coordinates
@@ -302,12 +330,8 @@ def arrows3d(ends: np.ndarray, starts: np.ndarray = None, ax=None, label: str = 
     :param ax: (Axes3DSubplot) existing axes to add to
     :param label: legend label to apply to this group of arrows
     :param kwargs: additional arrow properties"""
-    if starts is None:
-        starts = np.zeros_like(ends)
-
-    assert starts.shape == ends.shape, "`starts` and `ends` shape must match"
-    assert len(ends.shape) == 2 and ends.shape[1] == 3, \
-        "`starts` and `ends` must be shape (N, 3)"
+    import numpy as np
+    from matplotlib.patches import FancyArrowPatch
 
     class Arrow3D(FancyArrowPatch):
         def __init__(self, xs, ys, zs, *args, **kwargs):
@@ -315,11 +339,21 @@ def arrows3d(ends: np.ndarray, starts: np.ndarray = None, ax=None, label: str = 
             self._verts3d = xs, ys, zs
 
         def do_3d_projection(self, renderer=None):
+            from mpl_toolkits.mplot3d import proj3d
+
             xs3d, ys3d, zs3d = self._verts3d
             xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)
             self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
 
             return np.min(zs)
+
+    if starts is None:
+        starts = np.zeros_like(ends)
+
+    assert starts.shape == ends.shape, "`starts` and `ends` shape must match"
+    assert len(ends.shape) == 2 and ends.shape[1] == 3, \
+        "`starts` and `ends` must be shape (N, 3)"
+
 
     # create new axes if none given
     if ax is None:
@@ -338,6 +372,9 @@ def arrows3d(ends: np.ndarray, starts: np.ndarray = None, ax=None, label: str = 
 
 def plot_the_earth_mpl(ax, v: Variables, res: int = 1, pth: str = "./", earth_image=None):
     """Отрисовка слева красивой Земли из одной линии"""
+    import numpy as np
+    from PIL import Image
+
     x_points = 180 * res
     y_points = 90 * res
 
@@ -360,20 +397,25 @@ def plot_the_earth_mpl(ax, v: Variables, res: int = 1, pth: str = "./", earth_im
     return ax
 
 def plot_the_earth_go(v: Variables):
-    spherical_earth_map = np.load('kiamformation/data/map_sphere.npy')
-    xm, ym, zm = spherical_earth_map.T * v.EARTH_RADIUS
+    import numpy as np
+    import plotly.graph_objs as go
 
+    spherical_earth_map = np.load('kiamformation/data/map_sphere.npy')
+    # np.save('kiamformation/data/map_sphere.npy', spherical_earth_map)
+    xm, ym, zm = spherical_earth_map.T * v.EARTH_RADIUS
     return go.Scatter3d(x=xm, y=ym, z=zm, mode='lines')
 
 def plot_reference_frames(ax, o, txt: str, color: str = "gray", t: float = None):
     from dynamics import get_matrices
+    import numpy as np
+
     x = np.array([1, 0, 0])
     y = np.array([0, 1, 0])
     z = np.array([0, 0, 1])
     arrows = np.array([x, y, z]) * o.v.ORBIT_RADIUS
     start = np.zeros(3)
     if txt == "ОСК":
-        U, _, _, R_orb = get_matrices(obj=o.a, n=0, t=t, v=o.v)
+        U, _, _, R_orb = get_matrices(obj=o.a, n=0, t=t, vrs=o.v)
         arrows = np.array([U.T @ x, U.T @ y, U.T @ z]) * o.v.ORBIT_RADIUS / 2
         start = R_orb
     if txt == "ИСК":
@@ -400,6 +442,7 @@ def plot_reference_frames(ax, o, txt: str, color: str = "gray", t: float = None)
 def animate_reference_frames(resolution: int = 3, n: int = 5):
     from PIL import Image
     from os import remove
+    import numpy as np
 
     v_ = Variables()
     o = Objects(v=v_)
@@ -438,6 +481,8 @@ def animate_reference_frames(resolution: int = 3, n: int = 5):
 
 # >>>>>>>>>>>> Функции отображения, готовые к использованию <<<<<<<<<<<<
 def show_chipsats_and_cubesats(o, reference_frame: str, clr: str = 'lightpink', opacity: float = 1):
+    import numpy as np
+
     xyz_max = [-1e4] * 3
     xyz_min = [1e4] * 3
     xyz = np.zeros(3)

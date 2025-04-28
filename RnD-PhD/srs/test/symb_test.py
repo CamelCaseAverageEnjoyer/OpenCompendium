@@ -1,6 +1,6 @@
 """Проверка символьно-численного полиморфизма"""
 import unittest
-from srs.kiamformation.symbolic import *
+from srs.kiamformation.flexmath import *
 from srs.kiamformation.cosmetic import my_print
 
 class MyTests(unittest.TestCase):

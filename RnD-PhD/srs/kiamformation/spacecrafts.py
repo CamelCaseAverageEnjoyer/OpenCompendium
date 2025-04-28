@@ -1,23 +1,23 @@
 """Функции, связанные с архитектурой КА"""
-from my_math import *
 from config import Variables
-from symbolic import *
 
 # >>>>>>>>>>>> Диаграмма направленности антенн связи <<<<<<<<<<<<
 def r_a(ind: str):
-    if ind not in ['x', 'y', 'z']:
+    if ind not in 'xyz':
         raise ValueError(f"Координата «{ind}» должна быть среди: [x, y, z]")
     return [int(ind == 'x'), int(ind == 'y'), int(ind == 'z')]
 
-def local_dipole(v: Variables, r, ind: str = 'x', model='quarter-wave monopole'):
+def local_dipole(vrs: Variables, r, ind: str = 'x', model='quarter-wave monopole'):
     """Возвращает коэффициент усиления от 1-й антенны
-    :param v: Объект класса Variables
+    :param vrs: Объект класса Variables
     :param r: Радиус-вектор между антенной-трансмиттером и антенной-ресивером в ССК
     :param ind: Координата направления антенны-ресивера в ССК
     :param model: """
-    r_12 = r / norm(r)
-    r_12 += vec_type([0.03, 0.05, 0], b=r[0]) * v.DISTORTION  # Вручную задаваемое искажение диаграммы направленности
-    r_antenna_brf = vec_type(r_a(ind), b=r[0])
+    from flexmath import setvectype, norm, cos, dot, cross, pi
+    from my_math import vec2unit
+
+    r_12 = vec2unit(r) + setvectype([0.03, 0.05, 0]) * vrs.DISTORTION  # Искажение диаграммы направленности
+    r_antenna_brf = setvectype(r_a(ind))
     
     sin_theta = norm(cross(r_antenna_brf, r_12))
     cos_theta = dot(r_antenna_brf, r_12)
@@ -28,30 +28,18 @@ def local_dipole(v: Variables, r, ind: str = 'x', model='quarter-wave monopole')
     if model == 'quarter-wave monopole':
         return sin_theta**3
 
-def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False,
-             multy_take=None, multy_send=None, gm=None, return_dir: bool = False):
+def get_gain(vrs: Variables, obj, r, gm=None, return_dir: bool = False):
     """Возвращает вектор коэффициентов усиления от каждой антенны КА
-    :param v: Объект класса Variables
+    :param vrs: Объект класса Variables
     :param obj: Переменная класса Apparatus
     :param r: Направление сигнала в ССК КА
-    :param if_take: Флаг на принятый сигнал
-    :param if_send: Флаг на посланный сигнал
-    :param multy_take: Разлагается ли сигнал на КА-ресивере (опционально)
-    :param multy_send: Разлагается ли сигнал на КА-трасмитере (опционально)
-    :param return_dir: Вернуть только вектор направления антенны в ССК КА (опционально)
-    :param gm: Количество и тип антенн (опционально)"""
-    multy_take = v.MULTI_ANTENNA_TAKE if multy_take is None else multy_take
-    multy_send = v.MULTI_ANTENNA_SEND if multy_send is None else multy_send
+    :param return_dir: Возврат только вектора направления антенны в ССК КА (опционально)
+    :param gm: Количество и тип антенн (опционально)
+    Памятка: GAIN_MODES = ['isotropic', '1 antenna', '2 antennas', '3 antennas']"""
     gm = obj.gain_mode if gm is None else gm
-
-    # Памятка: GAIN_MODES = ['isotropic', '1 antenna', '2 antennas', '3 antennas']
-    if gm == v.GAIN_MODES[1]:
-        return [local_dipole(v, r, 'x')] if not return_dir else [r_a('x')]
-    if gm == v.GAIN_MODES[2]:
-        return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y')] if not return_dir else [r_a('x'), r_a('y')]
-    if gm == v.GAIN_MODES[3]:
-        return [local_dipole(v, r, 'x'), local_dipole(v, r, 'y'), local_dipole(v, r, 'z')] \
-            if not return_dir else [r_a('x'), r_a('y'), r_a('z')]
+    if gm in vrs.GAIN_MODES and gm != 'isotropic':
+        d = ['x', 'xy', 'xyz'][vrs.GAIN_MODES.index(gm) - 1]
+        return [local_dipole(vrs, r, i) for i in d] if not return_dir else [r_a(i) for i in d]
     return [1]
 
 
@@ -59,7 +47,8 @@ def get_gain(v: Variables, obj, r, if_take: bool = False, if_send: bool = False,
 class Apparatus:
     def __init__(self, v: Variables, n: int):
         """Пустой класс КА"""
-        from dynamics import get_matrices, o_i, get_c_hkw
+        from dynamics import get_matrices, o_i
+        import numpy as np
 
         # Общие параметры
         self.name = "No exist"
@@ -68,6 +57,8 @@ class Apparatus:
         self.size = [1., 1., 1.]
         self.c_resist = 0
         self.J = None
+        self.gain_mode = 'isotropic'
+        self.b_env = None
 
         # Индивидуальные параметры движения
         self.w_irf = [np.zeros(3) for _ in range(self.n)]
@@ -76,10 +67,9 @@ class Apparatus:
         self.q = [np.quaternion(1, 0, 0, 0) for _ in range(self.n)]
         self.r_orf = [np.zeros(3) for _ in range(self.n)]
         self.v_orf = [np.zeros(3) for _ in range(self.n)]
-        U, _, _, _ = get_matrices(v=v, t=0, obj=self, n=0, first_init=True)
-        self.r_irf = [o_i(v=v, a=self.r_orf[0], U=U, vec_type='r')]
-        self.v_irf = [o_i(v=v, a=self.v_orf[0], U=U, vec_type='v')]
-        self.c_hkw = [get_c_hkw(self.r_orf[i], self.v_orf[i], v.W_ORB) for i in range(self.n)]
+        U, _, _, _ = get_matrices(vrs=v, t=0, obj=self, n=0, first_init=True)
+        self.r_irf = [o_i(vrs=v, a=self.r_orf[0], U=U, vec_type='r')]
+        self.v_irf = [o_i(vrs=v, a=self.v_orf[0], U=U, vec_type='v')]
 
         # Индивидуальные параметры режимов работы
         self.operating_mode = [v.OPERATING_MODES[0] for _ in range(self.n)]
@@ -87,16 +77,12 @@ class Apparatus:
     def get_blown_surface(self, cos_alpha):
         return abs(self.size[0] * self.size[1] * abs(cos_alpha) * self.c_resist)
 
-    def update_c(self, v):
-        from dynamics import get_c_hkw
-        self.c_hkw = [get_c_hkw(self.r_orf[i], self.v_orf[i], v.W_ORB) for i in range(self.n)]
-
     def update_irf_rv(self, v: Variables, t: float = 0):
         from dynamics import o_i, get_matrices
         for i in range(self.n):
-            U, _, _, _ = get_matrices(v=v, t=t, obj=self, n=i)
-            self.r_irf[i] = o_i(v=v, a=self.r_orf[i], U=U, vec_type='r')
-            self.v_irf[i] = o_i(v=v, a=self.v_orf[i], U=U, vec_type='v')
+            U, _, _, _ = get_matrices(vrs=v, t=t, obj=self, n=i)
+            self.r_irf[i] = o_i(vrs=v, a=self.r_orf[i], U=U, vec_type='r')
+            self.v_irf[i] = o_i(vrs=v, a=self.v_orf[i], U=U, vec_type='v')
 
     def update_irf_w(self, v: Variables, t: float = 0, w_irf: list = None, w_orf: list = None, w_brf: list = None):
         from dynamics import o_i, get_matrices
@@ -104,8 +90,8 @@ class Apparatus:
         w_orf = self.w_orf if w_orf is None else w_orf
         w_brf = self.w_brf if w_brf is None else w_brf
         for i in range(self.n):
-            U, _, A, _ = get_matrices(v=v, t=t, obj=self, n=i)
-            w_irf[i] = o_i(a=w_orf[i], v=v, U=U, vec_type='w')
+            U, _, A, _ = get_matrices(vrs=v, t=t, obj=self, n=i)
+            w_irf[i] = o_i(a=w_orf[i], vrs=v, U=U, vec_type='w')
             w_brf[i] = A @ w_irf[i]
 
     def init_correct_q_v(self, v: Variables, q: list = None):
@@ -128,6 +114,7 @@ class CubeSat(Apparatus):
     """Класс содержит информацию об n кубсатах модели model_c = 1U/1.5U/2U/3U/6U/12U.
     Все величны представлены в СИ."""
     def __init__(self, v: Variables):
+        import numpy as np
         super().__init__(v=v, n=v.CUBESAT_AMOUNT)
 
         # Предопределённые параметры
@@ -167,14 +154,19 @@ class CubeSat(Apparatus):
         self.r_orf = [v.spread('r', name=self.name) for _ in range(self.n)]
         self.v_orf = [v.spread('v', name=self.name) for _ in range(self.n)]
         self.w_orf = [np.zeros(3) for _ in range(self.n)]
+        self.q = [np.quaternion(1, -1, -1, -1) for _ in range(self.n)]
+
+        # СПЕЦИАЛЬНЫЕ НАЧАЛЬНЫЕ УСЛОВИЯ ДЛЯ УДОВЛЕТВОРЕНИЯ ТРЕБОВАНИЯМ СТАТЬИ
+        self.r_orf[0] = np.zeros(3)
+        self.v_orf[0] = np.zeros(3)
+        self.w_orf[0] = np.zeros(3)
+        self.q[0] = np.quaternion(1, -1, -1, -1)
 
         # Инициализируется автоматически
-        self.q = [np.quaternion(1, -1, -1, -1) for _ in range(self.n)]
         self.init_correct_q_v(v=v)
         self.r_irf, self.v_irf, self.w_irf, self.w_irf = [[np.zeros(3) for _ in range(self.n)] for _ in range(4)]
         self.update_irf_rv(v=v, t=0)
         self.update_irf_w(v=v, t=0)
-        self.update_c(v=v)
 
         # Индивидуальные параметры управления
         self.m_self, self.b_env = [[np.zeros(3) for _ in range(self.n)] for _ in range(2)]
@@ -187,6 +179,7 @@ class FemtoSat(Apparatus):
     def __init__(self, v: Variables, c: CubeSat):
         """Класс содержит информацию об n фемтосатах.\n
         Все величны представлены в СИ."""
+        import numpy as np
         super().__init__(v=v, n=v.CHIPSAT_AMOUNT)
 
         # Предопределённые параметры
@@ -214,22 +207,22 @@ class FemtoSat(Apparatus):
         # Индивидуальные параметры движения
         self.deploy(v=v, c=c, i_c=0)
         self.w_orf_ = [v.spread('w', name=self.name) for _ in range(self.n)]
-        # Инициализируется автоматически
         self.r_irf, self.v_irf, self.w_irf, self.w_irf_, self.w_brf, self.w_brf_ = \
             [[np.zeros(3) for _ in range(self.n)] for _ in range(6)]
         self.q, self.q_ = [[np.quaternion(*np.random.uniform(-1, 1, 4)) for _ in range(self.n)] for _ in range(2)]
+
+        # СПЕЦИАЛЬНЫЕ НАЧАЛЬНЫЕ УСЛОВИЯ ДЛЯ УДОВЛЕТВОРЕНИЯ ТРЕБОВАНИЯМ СТАТЬИ
+        self.r_orf[0] = np.array([100, 0, 0])
+        self.v_orf[0] = np.array([0, 0.005, 0.005])
+        self.w_orf[0] = np.array([0, 0.0001, 0])
+        self.q[0] = np.quaternion(1, -1, -1, -1)
+
+        # Инициализируется автоматически
         self.init_correct_q_v(v=v)
         self.init_correct_q_v(v=v, q=self.q_)
         self.update_irf_rv(v=v, t=0)
         self.update_irf_w(v=v, t=0)
         self.update_irf_w(v=v, t=0, w_irf=self.w_irf_, w_orf=self.w_orf_, w_brf=self.w_brf_)
-        self.update_c(v=v)
-
-        # УДАЛИТЬ!!!!
-        '''from dynamics import r_hkw, v_hkw
-        self.c_hkw = [np.array([0, 100, 0, 10, 10, 0])]
-        self.r_orf[0] = r_hkw(self.c_hkw[0], v.W_ORB, 0)
-        self.v_orf[0] = v_hkw(self.c_hkw[0], v.W_ORB, 0)'''
 
         # Индивидуальные параметры управления
         self.m_self, self.b_env = [[np.zeros(3) for _ in range(self.n)] for _ in range(2)]
@@ -237,11 +230,6 @@ class FemtoSat(Apparatus):
         tol = 1 if v.START_NAVIGATION == v.NAVIGATIONS[0] else v.START_NAVIGATION_TOLERANCE
         tol = 0 if v.START_NAVIGATION == v.NAVIGATIONS[2] else tol
 
-        # Новый формат
-        '''self.apriori_params = {'r orf': [self.r_orf[i] + [10, 10, 10] for i in range(self.n)],
-                               'v orf': [self.v_orf[i] for i in range(self.n)],
-                               'w brf': [self.w_brf[i] for i in range(self.n)],
-                               'q-3 irf': [self.q[i].vec for i in range(self.n)]}'''
         if v.NAVIGATION_ANGLES:
             self.apriori_params = {'r orf': [self.r_orf[i] * tol + v.spread('r', name=self.name) * (1 - tol)
                                              for i in range(self.n)],
@@ -264,11 +252,13 @@ class FemtoSat(Apparatus):
         :param i_c: id-номер материнского КА, от которого отделяются дочерние КА
         :return: {'r orf': ..., 'v orf': ..., 'q-3 irf': ..., 'w irf': ...}, где значения - list of np.ndarray
         """
-        if v.DEPLOYMENT == v.DEPLOYMENTS[0]:  # No
+        import numpy as np
+
+        if v.DEPLOYMENT == v.DEPLOYMENTS[0]:  # Deploy: "No"
             self.r_orf = [v.spread('r', name=self.name) for _ in range(self.n)]
             self.v_orf = [v.spread('v', name=self.name) for _ in range(self.n)]
             self.w_orf = [v.spread('w', name=self.name) for _ in range(self.n)]
-        elif v.DEPLOYMENT == v.DEPLOYMENTS[1]:  # Specific
+        elif v.DEPLOYMENT == v.DEPLOYMENTS[1]:  # Deploy: "Specific"
             r_before = c.r_orf[i_c]
             v_before = c.v_orf[i_c]
             dv = 1e-2

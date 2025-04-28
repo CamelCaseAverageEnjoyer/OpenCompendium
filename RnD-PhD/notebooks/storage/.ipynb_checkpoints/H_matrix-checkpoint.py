@@ -3,7 +3,7 @@
 Копия файла из каталога OpenCompendium/RnD-PhD/notebooks/dynamic.ipynb     ycharmProjects/PythonCompendium/DissertationPhd/storage/observability_mapping_partial_derivatives.py
 '''
 import numpy as np
-from symbolic import *
+from flexmath import *
 
 def h_element(gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
     '''
@@ -22,7 +22,7 @@ def h_element(gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2,
     :param q1: Вектор-часть кватерниона 1-го КА (при angles_navigation=True)
     :param q2: Вектор-часть кватерниона 2-го КА (при angles_navigation=True)
     '''
-    from symbolic import pi
+    from flexmath import pi
 
     ff_sequence = []  # Последовательность номеров непустых столбцов, длина ff_sequence - кол-во строк нижней подматицы
     for i_f1 in range(fn):
@@ -245,7 +245,7 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
     ''' 
     from sympy import var, Matrix
     from spacecrafts import get_gain
-    from symbolic import zeros
+    from flexmath import zeros
 
     fn = f.n
     cn = c.n

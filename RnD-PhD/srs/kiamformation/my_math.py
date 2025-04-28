@@ -2,13 +2,14 @@
 from typing import Union
 import numpy as np
 import quaternion
-from symbolic import *
+from flexmath import *
 
 
 def get_antisymmetric_matrix(a):
-    return vec_type([[0, -a[2], a[1]],
-                    [a[2], 0, -a[0]],
-                    [-a[1], a[0], 0]])
+    from flexmath import setvectype
+    return setvectype([[0, -a[2], a[1]],
+                       [a[2], 0, -a[0]],
+                       [-a[1], a[0], 0]])
 
 def deg2rad(a: float) -> float:
     return a / 180 * np.pi
@@ -17,18 +18,8 @@ def rad2deg(a: float) -> float:
     return a * 180 / np.pi
 
 def vec2unit(a):
-    if isinstance(a, np.ndarray):
-        return a / np.linalg.norm(a)
-    from sympy import Matrix
-    from symbolic import sympy_norm
-    if isinstance(a, Matrix):
-        return sympy_norm(a)
-
-def my_cross(a, b):
-    """Функция векторного произведения"""
-    return vec_type([a[1] * b[2] - a[2] * b[1],
-                     a[2] * b[0] - a[0] * b[2],
-                     a[0] * b[1] - a[1] * b[0]])
+    from flexmath import norm
+    return a / norm(a)
 
 def matrix2angle(M):
     if isinstance(M, np.ndarray):
@@ -64,7 +55,7 @@ def q_dot(q1, q2):
 def get_q_Rodrigue_Hamilton(phi, r, symbol=False):
     if symbol:
         from sympy import cos, sin, var, Matrix
-        from symbolic import sympy_norm
+        from flexmath import sympy_norm
         rn = sympy_norm(r)
         return Matrix([cos(phi/2), r[0]/rn*sin(phi/2), r[1]/rn*sin(phi/2), r[2]/rn*sin(phi/2)])
     else:

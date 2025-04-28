@@ -2,8 +2,8 @@ import sys
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import QWidget, QGridLayout, QPushButton, QLabel, QApplication, QLineEdit, QCheckBox, \
-    QComboBox, \
-    QInputDialog, QFileDialog
+     QComboBox, \
+     QInputDialog, QFileDialog
 from simulation import save_simulation_trajectories, load_simulation_trajectories, find_close_solution
 from my_plot import *
 
@@ -106,6 +106,8 @@ class Window(QWidget):
         self.show()
 
     def buttons_and_labels(self):
+        from cosmetic import talk
+
         data = self.o.v.config_choose
         params = data.iloc[self.config_choose_n, :]
         y_all = 0
@@ -161,9 +163,6 @@ class Window(QWidget):
         y = 1
         self.name_type_func[y][n+0] = ["dT", "label", None, (1, 1)]
         self.name_type_func[y][n+1] = ["dT", f"combo;{params['dT']}", ";".join(self.o.v.dTs), (1, 1)]
-        y += 1
-        self.name_type_func[y][n+0] = ["dT_nav", "label", None, (1, 1)]
-        self.name_type_func[y][n+1] = ["dT_nav", f"combo;{params['dT_nav']}", ";".join(self.o.v.dTs), (1, 1)]
         y += 1
         self.name_type_func[y][n+0] = ["T", "label", "", (1, 1)]
         self.name_type_func[y][n+1] = ["TIME", f"combo;{params['TIME']}", ";".join(self.o.v.Ts), (1, 1)]
@@ -293,7 +292,6 @@ class Window(QWidget):
             self.o.v.DESCRIPTION = self.textboxes['Параметры'].text()
 
         self.o.v.dT = float(self.comboboxes['dT'].currentText())
-        self.o.v.dT_nav = float(self.comboboxes['dT_nav'].currentText())
         self.o.v.TIME = float(self.comboboxes['TIME'].currentText())
         self.o.v.START_NAVIGATION = self.comboboxes['START_NAVIGATION_N'].currentText()
         self.o.v.START_NAVIGATION_N = self.o.v.NAVIGATIONS.index(self.o.v.START_NAVIGATION)
@@ -392,6 +390,9 @@ class Window(QWidget):
 
     def main_run(self):
         """Функция запуска численного моделирования, выводы результатов"""
+        import numpy as np
+        from cosmetic import talk
+
         if self.o.p.iter < 2:
             my_print(f"Повторная инициализация...", color='y', if_print=self.o.v.IF_ANY_PRINT)
             self.o.init_classes()
@@ -402,6 +403,9 @@ class Window(QWidget):
         print(f"Математическое ожидание ошибки: {tmp.mean():.2f} м, Среднее отклонение ошибки: {tmp.std():.2f} м")
         if self.o.v.IF_NAVIGATION:
             plot_distance(self.o)  # Авто-показ графика оценки движения
+
+        if self.o.v.IF_TALK:
+            talk()
 
 def interface_window(o):
     app = QApplication(sys.argv)

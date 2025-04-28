@@ -1,15 +1,10 @@
 '''
-Файл сгененрирован программой OpenCompendium/RnD-PhD/notebooks/dynamic.ipynb (Раздел: Генерация файла H.matrix.py)
-Копия файла из каталога OpenCompendium/RnD-PhD/notebooks/dynamic.ipynb     ycharmProjects/PythonCompendium/DissertationPhd/storage/observability_mapping_partial_derivatives.py
+Файл сгененрирован программой OpenCompendium/RnD-PhD/notebooks/H matrix generation.ipynb
 '''
-import numpy as np
-from symbolic import *
 
-def h_element(gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
+def h_element(gm_1: str, gm_2: str, fn, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
     '''
     :param fn: Количество дочерних КА
-    :param cn: Количество материнских КА
-    :param relation: Измерения материнский-дочерний КА (cd) или дочерний-дочерний КА (dd) 
     :param angles_navigation: Оценивается ли вращательное движение
     :param r1: Положение 1-го КА
     :param r2: Положение 2-го КА
@@ -22,7 +17,7 @@ def h_element(gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2,
     :param q1: Вектор-часть кватерниона 1-го КА (при angles_navigation=True)
     :param q2: Вектор-часть кватерниона 2-го КА (при angles_navigation=True)
     '''
-    from symbolic import pi
+    from flexmath import pi, setvectype, sqrt, cos, sin
 
     ff_sequence = []  # Последовательность номеров непустых столбцов, длина ff_sequence - кол-во строк нижней подматицы
     for i_f1 in range(fn):

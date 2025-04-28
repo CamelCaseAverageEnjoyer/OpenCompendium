@@ -3,7 +3,7 @@
 Копия файла из каталога OpenCompendium/RnD-PhD/notebooks/dynamic.ipynb     ycharmProjects/PythonCompendium/DissertationPhd/storage/observability_mapping_partial_derivatives.py
 """
 import numpy as np
-from symbolic import *
+from flexmath import *
 
 def h_element(i_x, i_y, i_n, i, j, gm_1: str, gm_2: str, fn, cn, relation, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
     """Возвращает элемент матрицы Н в L_z^(c/d) строк и 6/13 столбцов.
