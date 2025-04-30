@@ -17,18 +17,17 @@ class Variables:
         rvw_chipsat = " ".join([str(i) for i in self.RVW_ChipSat_SPREAD])
         return [self.DESCRIPTION, self.dT, self.TIME, self.DISTORTION,
                 self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT, self.DYNAMIC_MODEL['aero drag'], self.DYNAMIC_MODEL['j2'],
-                self.NAVIGATION_ANGLES, self.MULTI_ANTENNA_TAKE, self.MULTI_ANTENNA_SEND,
-                self.START_NAVIGATION_N, self.GAIN_MODEL_C_N, self.GAIN_MODEL_F_N, self.IF_NAVIGATION,
-                self.CUBESAT_MODEL_N, self.CHIPSAT_MODEL_N, q, p, self.KALMAN_COEF['r'], rvw_cubesat, rvw_chipsat,
-                self.DEPLOYMENT_N]
+                self.NAVIGATION_ANGLES, self.START_NAVIGATION_N, self.GAIN_MODEL_C_N, self.GAIN_MODEL_F_N,
+                self.IF_NAVIGATION, self.CUBESAT_MODEL_N, self.CHIPSAT_MODEL_N, q, p, self.KALMAN_COEF['r'],
+                rvw_cubesat, rvw_chipsat, self.DEPLOYMENT_N]
 
     def set_saving_params(self, params):
         """Функция принимает набор параметров из файла
         Должно быть согласовано с: self.get_saving_params(), data/config_choose.csv"""
         self.DESCRIPTION, self.dT, self.TIME, self.DISTORTION, self.CUBESAT_AMOUNT, self.CHIPSAT_AMOUNT, \
-            aero, j2, self.NAVIGATION_ANGLES, self.MULTI_ANTENNA_TAKE, self.MULTI_ANTENNA_SEND, \
-            self.START_NAVIGATION_N, self.GAIN_MODEL_C_N, self.GAIN_MODEL_F_N, self.IF_NAVIGATION, \
-            self.CUBESAT_MODEL_N, self.CHIPSAT_MODEL_N, q, p, r, rvw_cubesat, rvw_chipsat, self.DEPLOYMENT_N = params
+            aero, j2, self.NAVIGATION_ANGLES, self.START_NAVIGATION_N, self.GAIN_MODEL_C_N, self.GAIN_MODEL_F_N, \
+            self.IF_NAVIGATION, self.CUBESAT_MODEL_N, self.CHIPSAT_MODEL_N, q, p, r, rvw_cubesat, rvw_chipsat, \
+            self.DEPLOYMENT_N = params
         self.DYNAMIC_MODEL['aero drag'] = aero
         self.DYNAMIC_MODEL['j2'] = j2
         self.KALMAN_COEF['q'] = [float(i) for i in q.split()]
@@ -89,8 +88,6 @@ class Variables:
         self.DYNAMIC_MODEL = {'aero drag': False,
                               'j2': False}
         self.NAVIGATION_ANGLES = False  # Содержит ли искомый вектор состояния кватернионы и угловые скорости
-        self.MULTI_ANTENNA_TAKE = False  # Разделяет ли КА приходящий сигнал на составляющие
-        self.MULTI_ANTENNA_SEND = False  # Разделяет ли КА исходящий сигнал на составляющие
         self.IF_NAVIGATION = True
 
         self.RVW_CubeSat_SPREAD = [1e2, 1e-1, 1e-4]  # r (м), v (м/с), ω (рад/с)
@@ -101,7 +98,7 @@ class Variables:
                           'KalmanVelocityLimit': [False, 1e3],
                           'KalmanPositionLimit': [False, 1e4]}
 
-        self.DISTORTION = 0.  # Искривление диаграммы направленности
+        self.DISTORTION = 0  # Искривление диаграммы направленности
         self.START_NAVIGATION_TOLERANCE = 0.9
 
 
@@ -145,7 +142,7 @@ class Variables:
         self.IF_ANY_SHOW = False  # а ты к чему относишься?
         self.RELATIVE_SIDES = False
         self.NO_LINE_FLAG = -10
-        self.EARTH_FILE_NAME = ["earth1.jpg", "earth2.jpg", "earth3.webp"][2]
+        self.EARTH_FILE_NAME = ["earth1.jpg", "earth2.jpg", "earth3.webp"][1]
         self.LANGUAGE = ['рус', 'eng'][1]
 
         # >>>>>>>>>>>> Константы <<<<<<<<<<<<
@@ -182,6 +179,18 @@ class Variables:
         # >>>>>>>>>>>> Ты сам выбрал этот путь, никто тебя не заставлял! <<<<<<<<<<<<
         self.config_choose = None
         self.load_params()
+
+        # >>>>>>>>>>>> Специальные начальные условия <<<<<<<<<<<<
+        self.specific_initial = {'CubeSat r': np.zeros(3), 'CubeSat v': np.zeros(3),
+                                 'CubeSat w': np.zeros(3),
+                                 'CubeSat q': np.quaternion(1, -1, -1, -1) / 2,
+                                 'CubeSat q-vec': np.array([-1, -1, -1]) / 2,
+                                 'ChipSat r': np.array([100, 0, 0]), 'ChipSat v': np.array([0, 0.1, 0.1]),
+                                 'ChipSat w': np.array([0, 0.0001, 0]),
+                                 'ChipSat q': np.quaternion(1, -1, -1, -1) / 2,
+                                 'ChipSat q-vec': np.array([-1, -1, -1]) / 2,
+                                 'ChipSat dr': np.array([10, 10, 10]),
+                                 'ChipSat dv': np.array([0.01, 0.01, 0.01])}
 
     def test_mode(self):
         self.IF_TALK = False

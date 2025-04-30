@@ -2,16 +2,12 @@
 Файл сгененрирован программой OpenCompendium/RnD-PhD/notebooks/H matrix generation.ipynb
 '''
 
-def h_element(gm_1: str, gm_2: str, fn, angles_navigation, r1, r2, r_f, q_f, multy_antenna_send: bool, multy_antenna_take: bool, w_0: float, t: float, q1: None, q2: None):
+def h_element(gm_1: str, gm_2: str, fn, angles_navigation, r1, r2, w_0: float, t: float, q1: None, q2: None):
     '''
     :param fn: Количество дочерних КА
     :param angles_navigation: Оценивается ли вращательное движение
     :param r1: Положение 1-го КА
     :param r2: Положение 2-го КА
-    :param r_f: Положения дочерних КА
-    :param q_f: Вектор-часть кватернионов ориентации дочерних КА
-    :param multy_antenna_send: Раскладывается ли сигнал при отправке
-    :param multy_antenna_take: Раскладывается ли сигнал при принятии
     :param w_0: Угловая скорость вращения ОСК относительно ИСК
     :param t: Текущее время
     :param q1: Вектор-часть кватерниона 1-го КА (при angles_navigation=True)

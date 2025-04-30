@@ -420,15 +420,7 @@ def plot_reference_frames(ax, o, txt: str, color: str = "gray", t: float = None)
         start = R_orb
     if txt == "ИСК":
         # Отрисовка кружочка
-        x, y, z = ([], [], [])
-        """n_round = 50
-        for t in np.linspace(0, o.v.SEC_IN_TURN * 1.5, n_round):
-            _, _, _, R_orb = get_matrices(v=o.v, t=t, obj=o.a, n=0)"""
-        for i in range(int(len(o.a.line_irf[0])//3)):
-            R_orb = o.a.line_irf[0][3*i:3*i+3]
-            x += [R_orb[0]]
-            y += [R_orb[1]]
-            z += [R_orb[2]]
+        x, y, z = [o.p.record[f'Anchor r {c} irf 0'].to_list() for c in 'xyz']
         ax.plot(x, y, z, color)
     ax = arrows3d(starts=np.array([start for _ in range(3)]), ends=np.array([start + arrows[i] for i in range(3)]),
                   ax=ax, color=color, label=txt)
@@ -439,14 +431,13 @@ def plot_reference_frames(ax, o, txt: str, color: str = "gray", t: float = None)
     return ax
 
 # >>>>>>>>>>>> Анимация <<<<<<<<<<<<
-def animate_reference_frames(resolution: int = 3, n: int = 5):
+def animate_reference_frames(resolution: int = 3, n: int = 10):
     from PIL import Image
     from os import remove
     import numpy as np
 
     v_ = Variables()
     o = Objects(v=v_)
-    # o.v.dT = o.v.SEC_IN_TURN / (n - 3)
     TIME = 2*np.pi / o.v.W_ORB
     o.v.dT = TIME / n
     o.v.IF_NAVIGATION = False
@@ -458,7 +449,7 @@ def animate_reference_frames(resolution: int = 3, n: int = 5):
     ax.set_zlim3d([-1e7, 1e7])
     x_points = 180 * resolution
     y_points = 90 * resolution
-    earth_image = Image.open(f'../../source/skins/{o.v.EARTH_FILE_NAME}')
+    earth_image = Image.open(f'../localfiles/{o.v.EARTH_FILE_NAME}')
     earth_image = np.array(earth_image.resize((x_points, y_points))) / 256.
     for i in range(n):
         o.p.time_step()
@@ -470,14 +461,14 @@ def animate_reference_frames(resolution: int = 3, n: int = 5):
         plt.title(f"Наклонение: {o.v.INCLINATION}°, эксцентриситет: {round(o.v.ECCENTRICITY, 2)}, "
                   f"апогей: {round(o.v.APOGEE / 1e3)} км, перигей: {round(o.v.PERIGEE / 1e3)} км")
         plt.legend()
-        plt.savefig(f"../../res/to_delete_{'{:04}'.format(i)}.png")
+        plt.savefig(f"../localfiles/to_delete_{'{:04}'.format(i)}.jpg")
         ax.clear()
     plt.close()
 
-    images = [Image.open(f"../../res/to_delete_{'{:04}'.format(i)}.png") for i in range(n)]
-    images[0].save('../../res/res.gif', save_all=True, append_images=images[1:], duration=20, loop=0)
+    images = [Image.open(f"../localfiles/to_delete_{'{:04}'.format(i)}.jpg") for i in range(n)]
+    images[0].save('../localfiles/res.gif', save_all=True, append_images=images[1:], duration=20, loop=0)
     for i in range(n):
-        remove(f"../../res/to_delete_{'{:04}'.format(i)}.png")
+        remove(f"../localfiles/to_delete_{'{:04}'.format(i)}.jpg")
 
 # >>>>>>>>>>>> Функции отображения, готовые к использованию <<<<<<<<<<<<
 def show_chipsats_and_cubesats(o, reference_frame: str, clr: str = 'lightpink', opacity: float = 1):

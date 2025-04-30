@@ -99,7 +99,7 @@ class Window(QWidget):
                 self.grid.addWidget(c, *position, *wh)
 
         # Редактирование окна
-        self.move(0, 0)
+        self.move(400, 0)
         self.setWindowTitle('kiam-formation')
         self.setStyleSheet('background-color: grey;')
         self.setWindowIcon(QIcon(self.path + "wizard.png"))
@@ -129,11 +129,11 @@ class Window(QWidget):
         y += 1
         self.name_type_func[y][n] = [self.path + "param.png", "button", self.plot_1_param, (1, 1)]
         # self.name_type_func[y][n+1] = ["Выборочно отобразить\nзаписанные параметры", "label", None, (1, 1)]
-        y += 1
-        self.name_type_func[y][n] = [self.path + "path.png", "button", self.local_solve_minimization, (1, 1)]
+        # y += 1
+        # self.name_type_func[y][n] = [self.path + "path.png", "button", self.local_solve_minimization, (1, 1)]
         # self.name_type_func[y][n+1] = ["Навигация роя\nс помощью scipy", "label", None, (1, 1)]
-        y += 1
-        self.name_type_func[y][n] = [self.path + "wizard.png", "button", lambda x=self.o: find_close_solution(x), (1, 1)]
+        # y += 1
+        # self.name_type_func[y][n] = [self.path + "wizard.png", "button", lambda x=self.o: find_close_solution(x), (1, 1)]
         # self.name_type_func[y][n+1] = ["Прикольные\nприколы", "label", None, (1, 1)]
         y += 1
         self.name_type_func[y][n] = [self.path + "antenna.png", "button", lambda x=self.o: plot_model_gain(x), (1, 1)]
@@ -142,9 +142,9 @@ class Window(QWidget):
         self.name_type_func[y][n] = [self.path + "air.png", "button", plot_atmosphere_models, (1, 1)]
         # self.name_type_func[y][n+1] = ["Посмотреть модели\nатмосферы", "label", None, (1, 1)]
         y += 1
-        # self.name_type_func[y][n] = [self.path + "animation.png", "button", animate_reference_frames, (1, 1)]
+        self.name_type_func[y][n] = [self.path + "animation.png", "button", animate_reference_frames, (1, 1)]
         # self.name_type_func[y][n+1] = ["Анимировать вращение\nвокруг Земли", "label", None, (1, 1)]
-        # y += 1
+        y += 1
         self.name_type_func[y][n] = [self.path + "save.png", "button", self.local_save_trajectories, (1, 1)]
         # self.name_type_func[y][n+1] = ["Сохранить траектории", "label", None, (1, 1)]
         y += 1
@@ -252,12 +252,6 @@ class Window(QWidget):
         self.name_type_func[y][n+0] = ["[q, ω]", "label", None, (1, 1)]
         self.name_type_func[y][n+1] = ["NAVIGATION_ANGLES", f"check;{int(params['NAVIGATION_ANGLES'])}", None, (1, 1)]
         y += 1
-        self.name_type_func[y][n+0] = ["Take", "label", None, (1, 1)]
-        self.name_type_func[y][n+1] = ["MULTI_ANTENNA_TAKE", f"check;{int(params['MULTI_ANTENNA_TAKE'])}", None, (1, 1)]
-        y += 1
-        self.name_type_func[y][n+0] = ["Send", "label", None, (1, 1)]
-        self.name_type_func[y][n+1] = ["MULTI_ANTENNA_SEND", f"check;{int(params['MULTI_ANTENNA_SEND'])}", None, (1, 1)]
-        y += 1
         self.name_type_func[y][n+0] = ["Kalman", "label", None, (1, 1)]
         self.name_type_func[y][n+1] = ["IF_NAVIGATION", f"check;{int(params['IF_NAVIGATION'])}", None, (1, 1)]
         y += 1
@@ -318,8 +312,6 @@ class Window(QWidget):
         self.o.v.DYNAMIC_MODEL['aero drag'] = self.checkboxes['DYNAMIC_MODEL_aero'].isChecked()
         self.o.v.DYNAMIC_MODEL['j2'] = self.checkboxes['DYNAMIC_MODEL_j2'].isChecked()
         self.o.v.NAVIGATION_ANGLES = self.checkboxes['NAVIGATION_ANGLES'].isChecked()
-        self.o.v.MULTI_ANTENNA_TAKE = self.checkboxes['MULTI_ANTENNA_TAKE'].isChecked()
-        self.o.v.MULTI_ANTENNA_SEND = self.checkboxes['MULTI_ANTENNA_SEND'].isChecked()
         self.o.v.IF_NAVIGATION = self.checkboxes['IF_NAVIGATION'].isChecked()
         self.o.v.RELATIVE_SIDES = self.checkboxes['RELATIVE_SIDES'].isChecked()
 

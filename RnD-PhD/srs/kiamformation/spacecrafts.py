@@ -16,7 +16,7 @@ def local_dipole(vrs: Variables, r, ind: str = 'x', model='quarter-wave monopole
     from flexmath import setvectype, norm, cos, dot, cross, pi
     from my_math import vec2unit
 
-    r_12 = vec2unit(r) + setvectype([0.03, 0.05, 0]) * vrs.DISTORTION  # Искажение диаграммы направленности
+    r_12 = vec2unit(r)  # + setvectype([0.03, 0.05, 0]) * vrs.DISTORTION  # Искажение диаграммы направленности
     r_antenna_brf = setvectype(r_a(ind))
     
     sin_theta = norm(cross(r_antenna_brf, r_12))
@@ -157,10 +157,7 @@ class CubeSat(Apparatus):
         self.q = [np.quaternion(1, -1, -1, -1) for _ in range(self.n)]
 
         # СПЕЦИАЛЬНЫЕ НАЧАЛЬНЫЕ УСЛОВИЯ ДЛЯ УДОВЛЕТВОРЕНИЯ ТРЕБОВАНИЯМ СТАТЬИ
-        self.r_orf[0] = np.zeros(3)
-        self.v_orf[0] = np.zeros(3)
-        self.w_orf[0] = np.zeros(3)
-        self.q[0] = np.quaternion(1, -1, -1, -1)
+        self.r_orf[0], self.v_orf[0], self.w_orf[0], self.q[0] = [v.specific_initial[f"CubeSat {i}"] for i in "rvwq"]
 
         # Инициализируется автоматически
         self.init_correct_q_v(v=v)
@@ -212,10 +209,7 @@ class FemtoSat(Apparatus):
         self.q, self.q_ = [[np.quaternion(*np.random.uniform(-1, 1, 4)) for _ in range(self.n)] for _ in range(2)]
 
         # СПЕЦИАЛЬНЫЕ НАЧАЛЬНЫЕ УСЛОВИЯ ДЛЯ УДОВЛЕТВОРЕНИЯ ТРЕБОВАНИЯМ СТАТЬИ
-        self.r_orf[0] = np.array([100, 0, 0])
-        self.v_orf[0] = np.array([0, 0.005, 0.005])
-        self.w_orf[0] = np.array([0, 0.0001, 0])
-        self.q[0] = np.quaternion(1, -1, -1, -1)
+        self.r_orf[0], self.v_orf[0], self.w_orf[0], self.q[0] = [v.specific_initial[f"ChipSat {i}"] for i in "rvwq"]
 
         # Инициализируется автоматически
         self.init_correct_q_v(v=v)
@@ -226,6 +220,7 @@ class FemtoSat(Apparatus):
 
         # Индивидуальные параметры управления
         self.m_self, self.b_env = [[np.zeros(3) for _ in range(self.n)] for _ in range(2)]
+        dr, dv = [v.specific_initial[f"ChipSat d{i}"] for i in "rv"]
 
         tol = 1 if v.START_NAVIGATION == v.NAVIGATIONS[0] else v.START_NAVIGATION_TOLERANCE
         tol = 0 if v.START_NAVIGATION == v.NAVIGATIONS[2] else tol
@@ -238,10 +233,14 @@ class FemtoSat(Apparatus):
                                    'w brf': [self.w_brf[i] * tol + self.w_brf_[i] * (1 - tol) for i in range(self.n)],
                                    'q-3 irf': [self.q[i].vec * tol + self.q_[i].vec * (1 - tol) for i in range(self.n)]}
         else:
-            self.apriori_params = {'r orf': [self.r_orf[i] * tol + v.spread('r', name=self.name) * (1 - tol)
+            '''self.apriori_params = {'r orf': [self.r_orf[i] * tol + v.spread('r', name=self.name) * (1 - tol)
                                              for i in range(self.n)],
                                    'v orf': [self.v_orf[i] * tol + v.spread('v', name=self.name) * (1 - tol)
                                              for i in range(self.n)],
+                                   'w brf': [self.w_brf[i] for i in range(self.n)],
+                                   'q-3 irf': [self.q[i].vec for i in range(self.n)]}'''
+            self.apriori_params = {'r orf': [self.r_orf[i] + dr for i in range(self.n)],
+                                   'v orf': [self.v_orf[i] + dv for i in range(self.n)],
                                    'w brf': [self.w_brf[i] for i in range(self.n)],
                                    'q-3 irf': [self.q[i].vec for i in range(self.n)]}
 

@@ -14,5 +14,6 @@ from my_plot import *
 from primary_info import *
 from spacecrafts import *
 from flexmath import *
+from H_matrix import *
 
 my_print(f"Инициализация проекта kiam-formation", color="g")

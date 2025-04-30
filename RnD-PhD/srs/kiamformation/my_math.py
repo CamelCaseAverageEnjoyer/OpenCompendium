@@ -1,9 +1,6 @@
 """Небольшие функции"""
-from typing import Union
 import numpy as np
 import quaternion
-from flexmath import *
-
 
 def get_antisymmetric_matrix(a):
     from flexmath import setvectype
@@ -55,11 +52,12 @@ def q_dot(q1, q2):
 def get_q_Rodrigue_Hamilton(phi, r, symbol=False):
     if symbol:
         from sympy import cos, sin, var, Matrix
-        from flexmath import sympy_norm
-        rn = sympy_norm(r)
+        from flexmath import norm
+        rn = norm(r)
         return Matrix([cos(phi/2), r[0]/rn*sin(phi/2), r[1]/rn*sin(phi/2), r[2]/rn*sin(phi/2)])
     else:
-        return np.quaternion(np.cos(phi/2), *(r/np.linalg.norm(r)*np.sin(phi/2)))
+        from flexmath import norm, cos, sin, quat
+        return quat([cos(phi/2), *(r / norm(r) * sin(phi/2))])
 
 def euler2rot_matrix(a: float, b: float, g: float) -> np.ndarray:
     return quaternion.as_rotation_matrix(quaternion.from_euler_angles(a, b, g))  # А где ты вообще нужен?
@@ -85,7 +83,7 @@ def clip(a: float, bot: float, top: float) -> float:
         return top
     return a
 
-def flatten(lst: Union[list, np.ndarray]) -> list:
+def flatten(lst) -> list:
     """Функция берёт 2D массив, делает 1D"""
     return [item for sublist in lst for item in sublist]
 
@@ -103,3 +101,16 @@ def matrix_minor(a, i: int, j: int):
 def principal_minor(a, i: int):
     if isinstance(a, np.ndarray):
         return np.linalg.det(np.delete(np.delete(a, np.arange(i+1, len(a)), axis=0), np.arange(i+1, len(a)), axis=1))
+
+def get_vars(name: str, n: int, numb: bool = True):
+    from sympy import var, Matrix
+    s = ""
+    axis = ["x", "y", "z"] if n == 3 else [0, "x", "y", "z"]
+    for i in range(n):
+        s += f"{name}_{i} " if numb else f"{name}_{axis[i]} "
+    return Matrix(var(s, real=True))
+
+def get_func(name: str, n: int, numb: bool = True, t=None):
+    from sympy import Function, Matrix
+    axis = ["x", "y", "z"] if n == 3 else [0, "x", "y", "z"]
+    return Matrix([Function(f"{name}_{i}" if numb else f"{name}_{axis[i]}", real=True)(t) for i in range(n)])

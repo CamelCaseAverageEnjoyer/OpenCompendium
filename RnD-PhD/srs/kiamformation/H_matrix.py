@@ -270,8 +270,6 @@ def h_matrix(t, v, f, c, r_f, r_c, q_f, q_c: list, return_template: bool = False
     c_g = v.GAIN_MODEL_C
     f_g = v.GAIN_MODEL_F
     angles_navigation = v.NAVIGATION_ANGLES
-    multy_antenna_send = v.MULTI_ANTENNA_SEND
-    multy_antenna_take = v.MULTI_ANTENNA_TAKE
     w_0 = v.W_ORB
 
     f_take_len = f_send_len = len(get_gain(vrs=v, obj=f, r=np.ones(3)))

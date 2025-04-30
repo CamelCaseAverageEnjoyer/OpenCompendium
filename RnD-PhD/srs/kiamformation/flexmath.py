@@ -1,9 +1,11 @@
 import numpy
+import quaternion
 import sympy
 
 
 def _numcheck(a):
-    return isinstance(a, numpy.ndarray) or isinstance(a, int) or isinstance(a, float) or isinstance(a, complex)
+    return isinstance(a, numpy.ndarray) or isinstance(a, int) or isinstance(a, float) or isinstance(a, complex) or \
+        isinstance(a, numpy.quaternion)
 
 
 def setvectype(a):
@@ -80,12 +82,11 @@ def dot(a, b):
         dot(sympy.var("a_1 a_2 a_3"), sympy.var("b_1 b_2 b_3"))
     """
     if _numcheck(a) or _numcheck(a[0]):
-        _a = a if isinstance(a, numpy.ndarray) else numpy.array(a)
-        _b = b if isinstance(b, numpy.ndarray) else numpy.array(b)
+        return numpy.dot(a, b)
     else:
         _a = a if isinstance(a, sympy.Matrix) else sympy.Matrix(a)
         _b = b if isinstance(b, sympy.Matrix) else sympy.Matrix(b)
-    return _a.T @ _b
+        return (_a.T @ _b)[0]
 
 
 def sin(a):

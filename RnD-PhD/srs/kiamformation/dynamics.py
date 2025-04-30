@@ -174,7 +174,7 @@ def rk4_attitude(vrs: Variables, obj, t: float, i: int, dt: float = None, q=None
 def get_matrices(vrs: Variables, t, obj=None, n: int = None, first_init: bool = False, q=None):
     """Функция возвращает матрицы поворота.
     Инициализируется в dymancis.py, используется в spacecrafts, dynamics"""
-    from flexmath import arctan, sqrt, setvectype, sin, cos, tan, cross, norm
+    from flexmath import arctan, sqrt, setvectype, sin, cos, tan, cross, norm, float2rational, get_same_type_conversion
     from my_math import quart2dcm, vec2unit
     from sympy import Matrix
     q = obj.q[n] if q is None else q
@@ -195,6 +195,7 @@ def get_matrices(vrs: Variables, t, obj=None, n: int = None, first_init: bool = 
                         [0, cos(vrs.INCLINATION), sin(vrs.INCLINATION)],
                         [0, -sin(vrs.INCLINATION), cos(vrs.INCLINATION)]])
         translation = vrs.P / (1 + vrs.ECCENTRICITY * cos(f))
+        U = float2rational(U, (2, 1), (1, 2), (1, 1))
     else:
         e_z = vec2unit(vrs.ANCHOR.r_irf[0])
         e_x = vec2unit(vrs.ANCHOR.v_irf[0])
@@ -207,7 +208,8 @@ def get_matrices(vrs: Variables, t, obj=None, n: int = None, first_init: bool = 
     S = A @ U.T
     if isinstance(A, Matrix):
         S.simplify()
-    R_orb = U.T @ setvectype([0, 0, translation])
+    tmp = get_same_type_conversion(U)
+    R_orb = U.T @ tmp([0, 0, translation])
     return U, S, A, R_orb
 
 def i_o(a, vrs: Variables, U, vec_type: str):
@@ -363,7 +365,7 @@ class PhysicModel:
         n_tmp = len(self.v.MEASURES_VECTOR)
         d.loc[i_t, f'MEASURES_VECTOR N'] = n_tmp
         d.loc[i_t, [f'MEASURES_VECTOR {i}' for i in range(n_tmp)]] = self.v.MEASURES_VECTOR
-        for obj in self.spacecrafts_cd:
+        for obj in self.spacecrafts_all:
             d.loc[i_t, f'{obj.name} n'] = obj.n
             for i_n in range(obj.n):
                 for v in ['r', 'q', 'v', 'w']:
